@@ -251,12 +251,12 @@ int main()
     // skybox
     std::vector<std::string> faces
     {
-        "../resources/skybox/right.jpg",
-        "../resources/skybox/left.jpg",
-        "../resources/skybox/top.jpg",
-        "../resources/skybox/bottom.jpg",
-        "../resources/skybox/front.jpg",
-        "../resources/skybox/back.jpg"
+        "../resources/underwater/right.jpg",
+        "../resources/underwater/left.jpg",
+        "../resources/underwater/top.jpg",
+        "../resources/underwater/bottom.jpg",
+        "../resources/underwater/front.jpg",
+        "../resources/underwater/back.jpg"
     };
     CubemapTexture skyboxTexture = CubemapTexture(faces);
     unsigned int VAOskybox, VBOskybox;
@@ -474,7 +474,7 @@ int main()
                 }
             }
         }
-
+        
         // use skybox Shader
         skyboxShader.use();
         glDepthFunc(GL_LEQUAL);
