@@ -22,7 +22,8 @@
 #include "model_animation.h"
 #include "animation.h"
 #include "animator.h"
-#include "spline_path.h"
+// #include "spline_path.h"
+#include "boid.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -246,20 +247,20 @@ int main()
     // Add entities to scene.
     // you can change the position/orientation.
     Scene scene;
-    std::vector<SplinePath*> splinePaths;
+    std::vector<Boid*> boids;
 
     for (int i = 0; i < 6; i++) {
         Entity* sharkEntity = new Entity(&sharkModel, glm::scale(glm::vec3(2.0f)));
         scene.addEntity(sharkEntity);
-        sharkEntity->splinePath = new SplinePath(sharkModel.radius, sharkModel.length, splinePaths);
-        splinePaths.push_back(sharkEntity->splinePath);
+        sharkEntity->boid = new Boid(sharkModel.radius, sharkModel.length, boids);
+        boids.push_back(sharkEntity->boid);
     }
 
     for (int i = 0; i < 15; i++) {
         Entity* bassEntity = new Entity(&bassModel, glm::rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::rotate(glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
         scene.addEntity(bassEntity);
-        bassEntity->splinePath = new SplinePath(bassModel.radius, bassModel.length, splinePaths);
-        splinePaths.push_back(bassEntity->splinePath);
+        bassEntity->boid = new Boid(bassModel.radius, bassModel.length, boids);
+        boids.push_back(bassEntity->boid);
     }
 
     scene.addEntity(new Entity(&shellModel, glm::translate(glm::vec3(3.0f, 0.0f, 3.0f))));
@@ -342,8 +343,8 @@ int main()
         bassAnimator.UpdateAnimation(2*deltaTime);
         sharkAnimator.UpdateAnimation(deltaTime);
 
-        for (auto splinePath: splinePaths) {
-            splinePath->advance(deltaTime, splinePaths);
+        for (auto boid: boids) {
+            boid->advance(deltaTime, boids);
         }
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -381,6 +382,9 @@ int main()
                 if (!model || model->ignoreShadow) continue;
                 for(Entity* entity : it->second) {
                     glm::mat4 modelMatrix = entity->getModelMatrix();
+                    if (entity->boid) {
+                        modelMatrix = entity->boid->calculateBoid() * modelMatrix;
+                    }
                     csmShader.setMat4("model", modelMatrix);
                     for (const SubMesh& subMesh : model->subMeshes) {
                         glBindVertexArray(subMesh.mesh.VAO);
@@ -404,6 +408,9 @@ int main()
                 if (!model || model->ignoreShadow) continue;
                 for(Entity* entity : it->second) {
                     glm::mat4 modelMatrix = entity->getModelMatrix();
+                    if (entity->boid) {
+                        modelMatrix = entity->boid->calculateBoid() * modelMatrix;
+                    }
                     shadowShader.setMat4("model", modelMatrix);
                     for (const SubMesh& subMesh : model->subMeshes) {
                         glBindVertexArray(subMesh.mesh.VAO);
@@ -479,8 +486,8 @@ int main()
 
             for(Entity* entity : it->second) {
                 glm::mat4 modelMatrix = entity->getModelMatrix();
-                if (entity->splinePath) {
-                    modelMatrix = entity->splinePath->calculateBSpline() * modelMatrix;
+                if (entity->boid) {
+                    modelMatrix = entity->boid->calculateBoid() * modelMatrix;
                 }
                 lightingShader.setMat4("world", modelMatrix);
 

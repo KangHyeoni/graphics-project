@@ -14,7 +14,8 @@
 #include "mesh.h"
 #include "texture.h"
 
-class SplinePath;
+// class SplinePath;
+class Boid;
 
 // Submesh structure
 struct SubMesh {
@@ -168,7 +169,8 @@ class Entity {
 public:
     Model* model;
     glm::mat4 modelMatrix;
-    SplinePath* splinePath = nullptr;
+    Boid* boid = nullptr;
+    // SplinePath* splinePath = nullptr;
 
     Entity(Model* model, glm::mat4 modelMatrix) {
         this->model = model;
