@@ -16,19 +16,21 @@ public:
     float t = 0.0f;
     float v = 0.2f;
     float r = 0.5f;
+    float len = 0.0f;
 
     SplinePath(
         glm::vec3 p0,
         glm::vec3 p1,
         glm::vec3 p2,
         glm::vec3 p3,
-        float r)
-        : p0(p0), p1(p1), p2(p2), p3(p3), r(r)
+        float r,
+        float len)
+        : p0(p0), p1(p1), p2(p2), p3(p3), r(r), len(len), cpDist(len * 2.0f)
     {}
 
     /* Set unoverlapping spline path */
-    SplinePath(float r, std::vector<SplinePath*>& splinePaths)
-        : r(r)
+    SplinePath(float r, float len, std::vector<SplinePath*>& splinePaths)
+        : r(r), len(len), cpDist(len * 2.0f)
     {
         randomize(splinePaths);
     }
@@ -80,30 +82,35 @@ public:
     }
 
 private:
-    const float minSpeed = 0.6f;
-    const float maxSpeed = 1.2f;
-    const float speedChangeTime = 1.0f;
-    const float minSpeedStayTime = 1.0f;
-    const float maxSpeedStayTime = 4.0f;
-    const float turnCos = cos(glm::radians(45.0f));
-    const float minTurnChance = 0.01f;
-    const float cpDist = 15.0f;
-    const float xMin = -10.0f;
-    const float xMax = 50.0f;
-    const float yMin = 10.0f;
+    /* Position bound */
+    const float xMin = -40.0f;
+    const float xMax = 80.0f;
+    const float yMin = 0.0f;
     const float yMax = 40.0f;
     const float zMin = -50.0f;
-    const float zMax = 10.0f;
+    const float zMax = 0.0f;
 
-    float startSpeed = 0.8f;
-    float targetSpeed = 0.8f;
-
-    float speedChangeTimer = 1.0f;
-    float speedStayTimer = 0.0f;
-    float speedStayTime = 2.0f;
-
+    /* New control point condition */
+    float cpDist = 15.0f;
+    const float turnCos = cos(glm::radians(45.0f));
+    const float minTurnChance = 0.01f;
     const int overlapSampleCount = 16;
 
+    /* Speed bound */
+    const float minSpeed = 0.5f;
+    const float maxSpeed = 0.8f;
+    const float minSpeedStayTime = 1.0f;
+    const float maxSpeedStayTime = 4.0f;
+
+    /* Speed */
+    float startSpeed = 0.6f;
+    float targetSpeed = 0.6f;
+
+    /* Timer */
+    const float speedChangeTime = 1.0f;
+    float speedStayTime = 2.0f;
+    float speedChangeTimer = 1.0f;
+    float speedStayTimer = 0.0f;
 
     /* Random control point in given cube */
     glm::vec3 randomCP() {
@@ -307,10 +314,9 @@ private:
             }
 
             nextCP = fitBound(p3, nextCP);
-            SplinePath candidate(p1, p2, p3, nextCP, r);
+            SplinePath candidate(p1, p2, p3, nextCP, r, len);
 
             if (candidate.isAvailableExcept(splinePaths, this)) {
-                std::cout << nextCP.x << ' ' << nextCP.y << ' ' << nextCP.z << std::endl;
                 return true;
             }
         }

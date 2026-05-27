@@ -228,12 +228,16 @@ int main()
     Animation bassAnimation("../resources/fish/bass/bass.dae", &bassModel);
 	Animator bassAnimator(&bassAnimation);
     bassModel.animator = &bassAnimator;
+    bassModel.radius *= 0.7;
+    bassModel.length *= 0.7;
     bassAnimation.SetDuration(1670.0);
 
     AnimationModel sharkModel = AnimationModel("../resources/fish/shark/shark.dae", false, false);
     Animation sharkAnimation("../resources/fish/shark/shark.dae", &sharkModel);
 	Animator sharkAnimator(&sharkAnimation);
     sharkModel.animator = &sharkAnimator;
+    sharkModel.radius *= 2;
+    sharkModel.length *= 2;
 
     Model shellModel = Model("../resources/seashell/seashell1/seashell1.obj");
 
@@ -244,18 +248,19 @@ int main()
     Scene scene;
     std::vector<SplinePath*> splinePaths;
 
-    Entity* sharkEntity = new Entity(&sharkModel, glm::mat4(1.0f));
-    scene.addEntity(sharkEntity);
-    sharkEntity->splinePath = new SplinePath(sharkModel.radius, splinePaths);
-    splinePaths.push_back(sharkEntity->splinePath);
+    for (int i = 0; i < 6; i++) {
+        Entity* sharkEntity = new Entity(&sharkModel, glm::scale(glm::vec3(2.0f)));
+        scene.addEntity(sharkEntity);
+        sharkEntity->splinePath = new SplinePath(sharkModel.radius, sharkModel.length, splinePaths);
+        splinePaths.push_back(sharkEntity->splinePath);
+    }
 
-    //scene.addEntity(new Entity(&sharkModel, glm::translate(glm::vec3(-3.5f, 0.0f, -2.0f)) * glm::scale(glm::vec3(2.0f))));
-    //scene.addEntity(new Entity(&sharkModel, glm::translate(glm::vec3(1.0f, 0.5f, -3.0f)) * glm::rotate(glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f))));
-    // scene.addEntity(new Entity(&bassModel, glm::rotate(glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f))));
-    Entity* bassEntity = new Entity(&bassModel, glm::rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::rotate(glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
-    scene.addEntity(bassEntity);
-    bassEntity->splinePath = new SplinePath(bassModel.radius, splinePaths);
-    splinePaths.push_back(bassEntity->splinePath);
+    for (int i = 0; i < 15; i++) {
+        Entity* bassEntity = new Entity(&bassModel, glm::rotate(glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::rotate(glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)));
+        scene.addEntity(bassEntity);
+        bassEntity->splinePath = new SplinePath(bassModel.radius, bassModel.length, splinePaths);
+        splinePaths.push_back(bassEntity->splinePath);
+    }
 
     scene.addEntity(new Entity(&shellModel, glm::translate(glm::vec3(3.0f, 0.0f, 3.0f))));
     for (int i = 0; i < 4; i++) {
@@ -322,7 +327,7 @@ int main()
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, matricesUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-    DirectionalLight sun(30.0f, 30.0f, glm::vec3(0.8f));
+    DirectionalLight sun(90.0f, 30.0f, glm::vec3(0.8f));
 
     float oldTime = 0;
     while (!glfwWindowShouldClose(window))// render loop

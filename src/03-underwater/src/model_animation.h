@@ -38,6 +38,7 @@ class AnimationModel : public Model
 public:
     Animator* animator;
     float radius = 0.0f;
+    float length = 0.0f;
 
     AnimationModel(const char* filePath, bool ignoreShadow = false, bool uvFlip = true)
     {
@@ -71,6 +72,7 @@ protected:
     void setRadius() {
         glm::vec3 halfSize = (maxPos - minPos) * 0.5f;
         radius = std::max(halfSize.y, halfSize.z);
+        length = maxPos.x - minPos.x;
     }
 
 	void SetVertexBoneDataToDefault(Vertex& vertex)
