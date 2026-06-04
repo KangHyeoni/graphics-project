@@ -1,10 +1,12 @@
 #ifndef BOID_H
 #define BOID_H
 
+#include <cmath>
+#include <vector>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/random.hpp>
-#include <vector>
 
 class Boid {
 public:
@@ -37,8 +39,8 @@ public:
     }
 
     glm::mat4 calculateBoid() {
-        float yaw = atan2(forward.x, forward.z);
-        float pitch = asin(glm::clamp(-forward.y, -1.0f, 1.0f));
+        float yaw = std::atan2(forward.x, forward.z);
+        float pitch = std::asin(glm::clamp(-forward.y, -1.0f, 1.0f));
 
         glm::mat4 yawRotation = glm::rotate(glm::mat4(1.0f), yaw, glm::vec3(0.0f, 1.0f, 0.0f));
         glm::mat4 pitchRotation = glm::rotate(glm::mat4(1.0f), pitch, glm::vec3(1.0f, 0.0f, 0.0f));

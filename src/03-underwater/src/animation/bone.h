@@ -3,10 +3,16 @@
 
 /* Container for bone data */
 
+#include <cassert>
+#include <string>
 #include <vector>
-#include <assimp/scene.h>
-#include <list>
+
+#include <assimp/anim.h>
+#include <assimp/quaternion.h>
+#include <assimp/vector3.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
 
@@ -83,7 +89,6 @@ public:
 	}
 	glm::mat4 GetLocalTransform() { return m_LocalTransform; }
 	std::string GetBoneName() const { return m_Name; }
-	int GetBoneID() { return m_ID; }
 	
 
 

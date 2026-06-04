@@ -1,37 +1,23 @@
 #ifndef MODEL_ANIMATION_H
 #define MODEL_ANIMATION_H
 
-#include <glad/glad.h> 
+#include <algorithm>
+#include <cassert>
+#include <map>
+#include <string>
+#include <vector>
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <assimp/Importer.hpp>
 #include <assimp/scene.h>
-#include <assimp/postprocess.h>
+#include <glm/glm.hpp>
 
 #include "../model.h"
 #include "../mesh.h"
-#include "../shader.h"
 #include "assimp_glm_helpers.h"
-
-#include <string>
-#include <fstream>
-#include <sstream>
-#include <iostream>
-#include <map>
-#include <vector>
+#include "bone_info.h"
 
 using namespace std;
 
 class Animator;
-
-struct BoneInfo
-{
-	// index in finalBoneMatrices
-	int id;
-	// matrix transforms vertex from model space to bone space
-	glm::mat4 offset;
-};
 
 class AnimationModel : public Model
 {

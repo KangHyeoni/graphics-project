@@ -1,14 +1,20 @@
 #ifndef ANIMATION_H
 #define ANIMATION_H
 
-#include <vector>
+#include <algorithm>
+#include <cassert>
 #include <map>
-#include <glm/glm.hpp>
-#include <assimp/scene.h>
-#include <functional>
+#include <string>
+#include <vector>
 
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
+#include <assimp/scene.h>
+#include <glm/glm.hpp>
+
+#include "assimp_glm_helpers.h"
 #include "bone.h"
-#include "model_animation.h"
+#include "bone_info.h"
 
 struct AssimpNodeData
 {
@@ -23,7 +29,8 @@ class Animation
 public:
 	Animation() = default;
 
-	Animation(const std::string& animationPath, AnimationModel* model)
+	template <typename AnimationModelType>
+	Animation(const std::string& animationPath, AnimationModelType* model)
 	{
 		Assimp::Importer importer;
 		const aiScene* scene = importer.ReadFile(animationPath, aiProcess_Triangulate);
@@ -64,7 +71,8 @@ public:
 	}
 
 private:
-	void ReadMissingBones(const aiAnimation* animation, AnimationModel& model)
+	template <typename AnimationModelType>
+	void ReadMissingBones(const aiAnimation* animation, AnimationModelType& model)
 	{
 		int size = animation->mNumChannels;
 

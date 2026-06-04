@@ -1,11 +1,11 @@
 #ifndef ANIMATOR_H
 #define ANIMATOR_H
 
-#include <glm/glm.hpp>
-#include <map>
+#include <cmath>
+#include <string>
 #include <vector>
-#include <assimp/scene.h>
-#include <assimp/Importer.hpp>
+
+#include <glm/glm.hpp>
 
 #include "animation.h"
 #include "bone.h"
@@ -30,15 +30,9 @@ public:
 		if (m_CurrentAnimation)
 		{
 			m_CurrentTime += m_CurrentAnimation->GetTicksPerSecond() * dt;
-			m_CurrentTime = fmod(m_CurrentTime, m_CurrentAnimation->GetDuration());
+			m_CurrentTime = std::fmod(m_CurrentTime, m_CurrentAnimation->GetDuration());
 			CalculateBoneTransform(&m_CurrentAnimation->GetRootNode(), glm::mat4(1.0f));
 		}
-	}
-
-	void PlayAnimation(Animation* pAnimation)
-	{
-		m_CurrentAnimation = pAnimation;
-		m_CurrentTime = 0.0f;
 	}
 
 	void CalculateBoneTransform(const AssimpNodeData* node, glm::mat4 parentTransform)
