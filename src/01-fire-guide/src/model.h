@@ -10,15 +10,17 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <map>
 #include "mesh.h"
 #include "texture.h"
 
-// Submesh structure
+
 struct SubMesh {
     Mesh mesh; 
     Texture* diffuse = nullptr;
     Texture* specular = nullptr;
     Texture* normal = nullptr;
+    glm::vec3 baseColor = glm::vec3(1.0f);
 };
 
 class Model {
@@ -32,10 +34,40 @@ public:
         loadModel(filePath);
     }
 
+    void setDiffuse(const char* path) {
+        Texture* tex = new Texture(path);
+        if (tex->isLoaded) {
+            textures_loaded.push_back(tex);
+            for(auto& sm : subMeshes) sm.diffuse = tex;
+        } else {
+            delete tex; // 로드 실패 시 메모리 누수 방지
+        }
+    }
+    
+    void setSpecular(const char* path) {
+        Texture* tex = new Texture(path);
+        if (tex->isLoaded) {
+            textures_loaded.push_back(tex);
+            for(auto& sm : subMeshes) sm.specular = tex;
+        } else {
+            delete tex;
+        }
+    }
+    
+    void setNormal(const char* path) {
+        Texture* tex = new Texture(path);
+        if (tex->isLoaded) {
+            textures_loaded.push_back(tex);
+            for(auto& sm : subMeshes) sm.normal = tex;
+        } else {
+            delete tex;
+        }
+    }
+
 private:
     void loadModel(std::string const &path) {
         Assimp::Importer importer;
-        const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+        const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_CalcTangentSpace);
 
         if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
             std::cout << "ERROR::ASSIMP:: " << importer.GetErrorString() << std::endl;
@@ -56,7 +88,6 @@ private:
         }
     }
 
-    // Submech processing
     SubMesh processMesh(aiMesh *mesh, const aiScene *scene) {
         std::vector<Vertex> vertices;
         std::vector<unsigned int> indices;
@@ -75,6 +106,16 @@ private:
                 vector.y = mesh->mNormals[i].y;
                 vector.z = mesh->mNormals[i].z;
                 vertex.Normal = vector;
+            }
+
+            if (mesh->mTangents) {
+                vector.x = mesh->mTangents[i].x;
+                vector.y = mesh->mTangents[i].y;
+                vector.z = mesh->mTangents[i].z;
+                vertex.Tangent = vector;
+            } 
+            else {
+                vertex.Tangent = glm::vec3(0.0f); 
             }
 
             if(mesh->mTextureCoords[0]) {
@@ -97,23 +138,23 @@ private:
         SubMesh subMesh;
         subMesh.mesh = Mesh(vertices, indices);
 
-        // mtl file based load texture
         if(mesh->mMaterialIndex >= 0) {
             aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+
+            aiColor3D color(1.0f, 1.0f, 1.0f);
+            material->Get(AI_MATKEY_COLOR_DIFFUSE, color);
+            subMesh.baseColor = glm::vec3(color.r, color.g, color.b);
             
-            // Diffuse
             if(material->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
                 aiString str;
                 material->GetTexture(aiTextureType_DIFFUSE, 0, &str);
                 subMesh.diffuse = loadMaterialTexture(str.C_Str());
             }
-            // Specular
             if(material->GetTextureCount(aiTextureType_SPECULAR) > 0) {
                 aiString str;
                 material->GetTexture(aiTextureType_SPECULAR, 0, &str);
                 subMesh.specular = loadMaterialTexture(str.C_Str());
             }
-            // Normal
             if(material->GetTextureCount(aiTextureType_HEIGHT) > 0) {
                 aiString str;
                 material->GetTexture(aiTextureType_HEIGHT, 0, &str);
@@ -128,7 +169,12 @@ private:
     }
 
     Texture* loadMaterialTexture(const char* path) {
-        std::string fullPath = directory + "/" + std::string(path);
+        std::string filename = std::string(path);
+        size_t lastSlash = filename.find_last_of("/\\");
+        if (lastSlash != std::string::npos) {
+            filename = filename.substr(lastSlash + 1);
+        }
+        std::string fullPath = directory + "/" + filename;
         
         for(unsigned int i = 0; i < textures_loaded.size(); i++) {
             if(textures_loaded[i]->path == fullPath) {
@@ -137,8 +183,15 @@ private:
         }
         
         Texture* texture = new Texture(fullPath.c_str());
-        textures_loaded.push_back(texture);
-        return texture;
+        if (texture->isLoaded) {
+            texture->path = fullPath;
+            textures_loaded.push_back(texture);
+            return texture;
+        } 
+        else {
+            delete texture; 
+            return nullptr;
+        }
     }
 };
 
@@ -146,6 +199,8 @@ class Entity {
 public:
     Model* model;
     glm::mat4 modelMatrix;
+    bool visible = true;
+
     Entity(Model* model, glm::mat4 modelMatrix) {
         this->model = model;
         this->modelMatrix = modelMatrix;
@@ -159,7 +214,6 @@ public:
         transform = glm::rotate(transform, glm::radians(rotY), glm::vec3(0.0f, 1.0f, 0.0f));
         transform = glm::rotate(transform, glm::radians(rotZ), glm::vec3(0.0f, 0.0f, 1.0f));
         transform = glm::scale(transform, glm::vec3(scale));
-
         this->modelMatrix = transform;
     }
 

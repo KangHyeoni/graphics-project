@@ -17,7 +17,8 @@ struct Particle {
     glm::vec3 Position, Velocity, Normal;
     glm::vec4 Color;
     float Life;
-    Particle() : Position(0.0f), Velocity(0.0f), Normal(0.0f, 1.0f, 0.0f), Color(1.0f), Life(0.0f) { }
+    float Size;
+    Particle() : Position(0.0f), Velocity(0.0f), Normal(0.0f, 1.0f, 0.0f), Color(1.0f), Life(0.0f), Size(0.05f) { }
 };
 
 class FireParticleSystem {
@@ -29,8 +30,7 @@ public:
     }
 
     // Update particles at vertices of mesh
-    void Update(float dt, float time, Model* targetModel, glm::mat4 modelMatrix) {
-        unsigned int newParticles = 5000; 
+    void Update(float dt, float time, Model* targetModel, glm::mat4 modelMatrix, unsigned int newParticles = 100) {
         for (unsigned int i = 0; i < newParticles; ++i) {
             int unusedParticle = this->firstUnusedParticle();
             this->respawnParticle(this->particles[unusedParticle], targetModel, modelMatrix);
@@ -189,6 +189,195 @@ private:
         particle.Color = glm::vec4(1.0f, (rand() % 30)/100.0f, 0.0f, 1.0f); 
         particle.Life = 1.0f + (rand() % 100) / 100.0f; 
         particle.Velocity = glm::vec3(0.0f); 
+    }
+};
+
+// [Feature] Meteor Trail Particle System: Add some random concepts
+class MeteorParticleSystem {
+public:
+    MeteorParticleSystem(Shader shader, unsigned int amount)
+        : shader(shader), amount(amount) {
+        this->init();
+    }
+
+    void EmitTrail(const glm::vec3& headPosition, const glm::vec3& velocity, unsigned int newParticles = 25,
+                   float particleSize = 0.14f, float spread = 0.25f, float minLife = 0.35f, float maxLife = 0.9f) {
+        glm::vec3 trailDir = glm::normalize(-velocity);
+        glm::vec3 sideA = glm::cross(trailDir, glm::vec3(0.0f, 1.0f, 0.0f));
+        if (glm::length(sideA) < 0.01f) {
+            sideA = glm::vec3(1.0f, 0.0f, 0.0f);
+        } else {
+            sideA = glm::normalize(sideA);
+        }
+        glm::vec3 sideB = glm::normalize(glm::cross(trailDir, sideA));
+
+        for (unsigned int i = 0; i < newParticles; ++i) {
+            int unusedParticle = this->firstUnusedParticle();
+            this->respawnParticle(this->particles[unusedParticle], headPosition, velocity, trailDir, sideA, sideB,
+                                  particleSize, spread, minLife, maxLife);
+        }
+    }
+
+    void EmitSurfaceFire(Model* targetModel, const glm::mat4& modelMatrix, const glm::vec3& velocity,
+                         unsigned int newParticles = 40, float particleSize = 0.14f, float spread = 0.5f,
+                         float minLife = 0.45f, float maxLife = 1.0f) {
+        if (!targetModel || targetModel->subMeshes.empty()) return;
+
+        glm::vec3 trailDir = glm::normalize(-velocity);
+        for (unsigned int i = 0; i < newParticles; ++i) {
+            int unusedParticle = this->firstUnusedParticle();
+            this->respawnSurfaceParticle(this->particles[unusedParticle], targetModel, modelMatrix, velocity,
+                                         trailDir, particleSize, spread, minLife, maxLife);
+        }
+    }
+
+    void Update(float dt) {
+        for (unsigned int i = 0; i < this->amount; ++i) {
+            Particle& p = this->particles[i];
+            p.Life -= dt;
+            if (p.Life > 0.0f) {
+                p.Position += p.Velocity * dt;
+                p.Velocity *= 0.97f;
+                p.Color.a = glm::clamp(p.Life / 0.9f, 0.0f, 1.0f);
+            }
+        }
+    }
+
+    void Draw(Camera& camera) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+        glDepthMask(GL_FALSE);
+
+        this->shader.use();
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 800.0f / 600.0f, 0.1f, 100.0f);
+        glm::mat4 view = camera.GetViewMatrix();
+        this->shader.setMat4("projection", projection);
+        this->shader.setMat4("view", view);
+
+        glBindVertexArray(this->VAO);
+        for (Particle particle : this->particles) {
+            if (particle.Life > 0.0f) {
+                this->shader.setVec4("color", particle.Color);
+
+                glm::mat4 model = glm::mat4(1.0f);
+                model = glm::translate(model, particle.Position);
+                model = glm::scale(model, glm::vec3(particle.Size));
+                model[0][0] = view[0][0]; model[0][1] = view[1][0]; model[0][2] = view[2][0];
+                model[1][0] = view[0][1]; model[1][1] = view[1][1]; model[1][2] = view[2][1];
+                model[2][0] = view[0][2]; model[2][1] = view[1][2]; model[2][2] = view[2][2];
+
+                this->shader.setMat4("model", model);
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+            }
+        }
+
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDepthMask(GL_TRUE);
+    }
+
+private:
+    std::vector<Particle> particles;
+    unsigned int amount;
+    Shader shader;
+    unsigned int VAO;
+    unsigned int lastUsedParticle = 0;
+
+    void init() {
+        unsigned int VBO;
+        float particle_quad[] = {
+            -0.5f,  0.5f, 0.0f, 0.0f, 1.0f,
+             0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
+            -0.5f, -0.5f, 0.0f, 0.0f, 0.0f,
+            -0.5f,  0.5f, 0.0f, 0.0f, 1.0f,
+             0.5f,  0.5f, 0.0f, 1.0f, 1.0f,
+             0.5f, -0.5f, 0.0f, 1.0f, 0.0f
+        };
+        glGenVertexArrays(1, &this->VAO);
+        glGenBuffers(1, &VBO);
+        glBindVertexArray(this->VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(particle_quad), particle_quad, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+
+        for (unsigned int i = 0; i < this->amount; ++i) {
+            this->particles.push_back(Particle());
+        }
+    }
+
+    unsigned int firstUnusedParticle() {
+        for (unsigned int i = lastUsedParticle; i < this->amount; ++i) {
+            if (this->particles[i].Life <= 0.0f) {
+                lastUsedParticle = i;
+                return i;
+            }
+        }
+        for (unsigned int i = 0; i < lastUsedParticle; ++i) {
+            if (this->particles[i].Life <= 0.0f) {
+                lastUsedParticle = i;
+                return i;
+            }
+        }
+        lastUsedParticle = 0;
+        return 0;
+    }
+
+    void respawnParticle(Particle& particle, const glm::vec3& headPosition, const glm::vec3& velocity,
+                         const glm::vec3& trailDir, const glm::vec3& sideA, const glm::vec3& sideB,
+                         float particleSize, float spread, float minLife, float maxLife) {
+        float trailOffset = 0.2f + (rand() % 120) / 100.0f;
+        float spreadA = ((rand() % 100) / 100.0f - 0.5f) * spread;
+        float spreadB = ((rand() % 100) / 100.0f - 0.5f) * spread;
+        particle.Position = headPosition + trailDir * trailOffset + sideA * spreadA + sideB * spreadB;
+        particle.Velocity = -velocity * (0.08f + (rand() % 40) / 1000.0f) + trailDir * (0.5f + (rand() % 80) / 100.0f);
+        particle.Normal = trailDir;
+        particle.Color = glm::vec4(1.0f, 0.25f + (rand() % 55) / 100.0f, 0.02f, 1.0f);
+        particle.Life = minLife + ((rand() % 100) / 100.0f) * (maxLife - minLife);
+        particle.Size = particleSize * (0.75f + (rand() % 60) / 100.0f);
+    }
+
+    void respawnSurfaceParticle(Particle& particle, Model* targetModel, const glm::mat4& modelMatrix,
+                                const glm::vec3& velocity, const glm::vec3& trailDir,
+                                float particleSize, float spread, float minLife, float maxLife) {
+        int subMeshIdx = rand() % targetModel->subMeshes.size();
+        auto& vertices = targetModel->subMeshes[subMeshIdx].mesh.vertices;
+        if (vertices.empty()) {
+            particle.Life = 0.0f;
+            return;
+        }
+
+        Vertex randomVertex = vertices[rand() % vertices.size()];
+        glm::mat3 normalMatrix = glm::mat3(glm::transpose(glm::inverse(modelMatrix)));
+        glm::vec3 normal = glm::normalize(normalMatrix * randomVertex.Normal);
+        if (glm::length(normal) < 0.01f) {
+            normal = glm::vec3(0.0f, 1.0f, 0.0f);
+        }
+
+        glm::vec3 sideA = glm::cross(normal, trailDir);
+        if (glm::length(sideA) < 0.01f) {
+            sideA = glm::cross(normal, glm::vec3(1.0f, 0.0f, 0.0f));
+        }
+        if (glm::length(sideA) < 0.01f) {
+            sideA = glm::vec3(0.0f, 0.0f, 1.0f);
+        } else {
+            sideA = glm::normalize(sideA);
+        }
+        glm::vec3 sideB = glm::normalize(glm::cross(normal, sideA));
+
+        float outwardOffset = 0.02f + (rand() % 100) / 100.0f * spread * 0.2f;
+        float sideOffsetA = ((rand() % 100) / 100.0f - 0.5f) * spread * 0.2f;
+        float sideOffsetB = ((rand() % 100) / 100.0f - 0.5f) * spread * 0.2f;
+        particle.Position = glm::vec3(modelMatrix * glm::vec4(randomVertex.Position, 1.0f));
+        particle.Position += normal * outwardOffset + sideA * sideOffsetA + sideB * sideOffsetB;
+        particle.Velocity = trailDir * (0.8f + (rand() % 100) / 100.0f * 1.2f)
+                          + normal * (0.3f + (rand() % 100) / 100.0f * 0.8f)
+                          - velocity * (0.04f + (rand() % 40) / 1000.0f);
+        particle.Normal = normal;
+        particle.Color = glm::vec4(1.0f, 0.22f + (rand() % 60) / 100.0f, 0.02f, 1.0f);
+        particle.Life = minLife + ((rand() % 100) / 100.0f) * (maxLife - minLife);
+        particle.Size = particleSize * (0.8f + (rand() % 70) / 100.0f);
     }
 };
 
