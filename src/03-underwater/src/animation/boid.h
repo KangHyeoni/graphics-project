@@ -23,7 +23,8 @@ public:
         : r(r), len(len),
           avoidDist(r * 2.5f),
           alignDist(len * 3.0f),
-          cohereDist(len * 4.0f)
+          cohereDist(len * 4.0f),
+          margin(len * 2.0f)
     {
         randomize(boids);
     }
@@ -38,6 +39,7 @@ public:
         force += separate(boids) * 4.0f;
         force += align(boids) * 0.5f;
         force += cohere(boids) * 0.15f;
+        force += boundForce() * 1.6f;
         force += wander() * 0.05f;
         force = limit(force, maxForce);
 
@@ -46,7 +48,7 @@ public:
 
         position += velocity * dt;
         
-        wrapBound();
+        fitBound();
         updateForward(dt);
     }
 
@@ -78,6 +80,7 @@ private:
     float avoidDist;
     float alignDist;
     float cohereDist;
+    float margin;
 
     /*
      * setting initial state of current object
@@ -203,6 +206,20 @@ private:
         return steerTo(center - position);
     }
 
+    // Move to the bound center (if near to boundary)
+    glm::vec3 boundForce() {
+        glm::vec3 force = glm::vec3(0.0f);
+
+        if (position.x < xMin + margin) force.x += 1.0f;
+        if (position.x > xMax - margin) force.x -= 1.0f;
+        if (position.y < yMin + margin) force.y += 1.0f;
+        if (position.y > yMax - margin) force.y -= 1.0f;
+        if (position.z < zMin + margin) force.z += 1.0f;
+        if (position.z > zMax - margin) force.z -= 1.0f;
+
+        return steerTo(force);
+    }
+
     // Move randomly
     glm::vec3 wander() {
         return glm::sphericalRand(maxForce);
@@ -253,20 +270,31 @@ private:
         return v;
     }
 
-    // wrap around the position
-    void wrapBound() {
-        wrapAxis(position.x, xMin, xMax);
-        wrapAxis(position.y, yMin, yMax);
-        wrapAxis(position.z, zMin, zMax);
-    }
-
-    void wrapAxis(float& value, float minValue, float maxValue) {
-        float range = maxValue - minValue;
-        while (value < minValue) {
-            value += range;
+    // reflection at the boundary
+    void fitBound() {
+        if (position.x < xMin) {
+            position.x = xMin;
+            velocity.x = glm::abs(velocity.x);
         }
-        while (value > maxValue) {
-            value -= range;
+        if (position.x > xMax) {
+            position.x = xMax;
+            velocity.x = -glm::abs(velocity.x);
+        }
+        if (position.y < yMin) {
+            position.y = yMin;
+            velocity.y = glm::abs(velocity.y);
+        }
+        if (position.y > yMax) {
+            position.y = yMax;
+            velocity.y = -glm::abs(velocity.y);
+        }
+        if (position.z < zMin) {
+            position.z = zMin;
+            velocity.z = glm::abs(velocity.z);
+        }
+        if (position.z > zMax) {
+            position.z = zMax;
+            velocity.z = -glm::abs(velocity.z);
         }
     }
 };
