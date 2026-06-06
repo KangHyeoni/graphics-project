@@ -19,13 +19,13 @@ public:
     float r = 0.5f;
     float len = 1.0f;
 
-    Boid(float r, float len, vector<Boid*>& boids, float flockStrength = 1.0f)
+    Boid(float r, float len, vector<Boid*>& boids, float groupWeight = 1.0f)
         : r(r), len(len),
           avoidDist(r * 2.1f),
           alignDist(len * 5.5f),
           cohereDist(len * 7.0f),
           margin(len * 2.0f),
-          flockStrength(flockStrength)
+          groupWeight(groupWeight)
     {
         randomize(boids);
     }
@@ -38,8 +38,8 @@ public:
         glm::vec3 force = glm::vec3(0.0f);
 
         force += separate(allBoids) * sepWeight;
-        force += align(groupBoids) * alignWeight * flockStrength;
-        force += cohere(groupBoids) * cohereWeight * flockStrength;
+        force += align(groupBoids) * alignWeight * groupWeight;
+        force += cohere(groupBoids) * cohereWeight * groupWeight;
         force += boundForce() * boundWeight;
         force += wander() * wanderWeight;
         force = limit(force, maxForce);
@@ -69,15 +69,15 @@ public:
 
 private:
     static constexpr float sepWeight = 3.8f;
-    static constexpr float alignWeight = 1.15f;
-    static constexpr float cohereWeight = 0.55f;
+    static constexpr float alignWeight = 1.1f;
+    static constexpr float cohereWeight = 0.6f;
     static constexpr float boundWeight = 1.5f;
-    static constexpr float wanderWeight = 0.025f;
+    static constexpr float wanderWeight = 0.03f;
 
-    static constexpr float initVelYScale = 0.24f;
+    static constexpr float initVelYScale = 0.25f;
     static constexpr float wanderYScale = 0.25f;
     static constexpr float steerYScale = 0.45f;
-    static constexpr float velYScale = 0.82f;
+    static constexpr float velYScale = 0.995f;
 
     const float xMin = -50.0f;
     const float xMax = 110.0f;
@@ -94,7 +94,7 @@ private:
     float alignDist;
     float cohereDist;
     float margin;
-    float flockStrength;
+    float groupWeight;
 
     /*
      * setting initial state of current object
