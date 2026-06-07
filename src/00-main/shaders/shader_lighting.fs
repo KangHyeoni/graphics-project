@@ -32,20 +32,9 @@ uniform vec3 baseColor;
 uniform float useShadow;
 uniform float useLighting;
 uniform float usePCF;
-uniform float useCSM;
 
 // I referenced this part from learnopengl Stratified Poisson Sampling part
 uniform sampler2D depthMapSampler;
-
-// I referenced this part from learnopengl Cascaded Shadow Mapping code
-uniform sampler2DArray csmDepthMapSampler;
-uniform mat4 view;
-layout (std140) uniform LightSpaceMatrices
-{
-    mat4 lightSpaceMatrices[16];
-};
-uniform float cascadePlaneDistances[16];
-uniform int cascadeCount; 
 
 // I referenced this part from learnopengl Stratified Poisson Sampling part
 float random(vec3 seed, int i){
@@ -53,84 +42,6 @@ float random(vec3 seed, int i){
 	float dot_product = dot(seed4, vec4(12.9898,78.233,45.164,94.673));
 	return fract(sin(dot_product) * 43758.5453);
 }
-
-
-// I referenced this part from learnopengl Cascaded Shadow Mapping code
-float csmCalculation(vec3 fragPosWorldSpace)
-{
-    vec4 fragPosViewSpace = view * vec4(fragPosWorldSpace, 1.0);
-    float depthValue = abs(fragPosViewSpace.z);
-
-    int layer = -1;
-    for (int i = 0; i < cascadeCount; ++i)
-    {
-        if (depthValue < cascadePlaneDistances[i])
-        {
-            layer = i;
-            break;
-        }
-    }
-    if (layer == -1)
-    {
-        layer = cascadeCount;
-    }
-
-    vec4 fragPosLightSpace = lightSpaceMatrices[layer] * vec4(fragPosWorldSpace, 1.0);
-    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    projCoords = projCoords * 0.5 + 0.5;
-    float closestDepth = texture(csmDepthMapSampler, vec3(projCoords.xy, float(layer))).r;
-    float currentDepth = projCoords.z;
-    if (currentDepth > 1.0)
-    {
-        return 0.0;
-    }
-    vec3 normal = normalize(Normal);
-    vec3 lightDir = normalize(-light.dir);
-    float bias = max(0.005f * (1.0 - dot(normal, lightDir)), 0.0005f);
-    const float biasModifier = 0.5f;
-    if (layer == cascadeCount)
-    {
-        bias *= 1.0f / (100.0f * biasModifier);
-    }
-    else
-    {
-        bias *= 1.0f / (cascadePlaneDistances[layer] * biasModifier);
-    }
-    float shadow = 0.0;
-
-    // I referenced this part from learnopengl Stratified Poisson Sampling part
-    if (usePCF > 0.5f) {
-        vec2 poissonDisk[16] = vec2[]( 
-            vec2( -0.94201624, -0.39906216 ), 
-            vec2( 0.94558609, -0.76890725 ), 
-            vec2( -0.094184101, -0.92938870 ), 
-            vec2( 0.34495938, 0.29387760 ), 
-            vec2( -0.91588581, 0.45771432 ), 
-            vec2( -0.81544232, -0.87912464 ), 
-            vec2( -0.38277543, 0.27676845 ), 
-            vec2( 0.97484398, 0.75648379 ), 
-            vec2( 0.44323325, -0.97511554 ), 
-            vec2( 0.53742981, -0.47373420 ), 
-            vec2( -0.26496911, -0.41893023 ), 
-            vec2( 0.79197514, 0.19090188 ), 
-            vec2( -0.24188840, 0.99706507 ), 
-            vec2( -0.81409955, 0.91437590 ), 
-            vec2( 0.19984126, 0.78641367 ), 
-            vec2( 0.14383161, -0.14100790 ) 
-        );
-
-        for (int i = 0; i < 4; i++) {
-            int index = int(16.0 * random(floor(FragPos.xyz*1000.0), i)) % 16;
-            float pcfDepth = texture(csmDepthMapSampler, vec3(projCoords.xy + poissonDisk[index] / 700.0, float(layer))).r;
-            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
-        }
-        shadow /= 4.0;
-    }
-    else shadow = currentDepth - bias > closestDepth ? 1.0f : 0.0f;
-        
-    return shadow;
-}
-
 
 // I referenced this part from learnopengl shadow part
 float ShadowCalculation(vec4 fragPosLightSpace)
@@ -210,8 +121,7 @@ void main()
     float shadow = 0.0f;
     if(useShadow > 0.5f)
     {
-        if (useCSM > 0.5f) shadow = csmCalculation(FragPos);
-        else shadow = ShadowCalculation(FragPosLightSpace);
+        shadow = ShadowCalculation(FragPosLightSpace);
     }
     
     // on-off by key 1 (useNormalMap).

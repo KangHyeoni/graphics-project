@@ -55,118 +55,6 @@ bool useSpecular = false;
 bool useLighting = true;
 bool useShadow = true;
 bool usePCF = false;
-bool useCSM = false;
-
-
-// I obtained this part from learnopengl Cascaded Shadow Mapping code
-unsigned int lightFBO;
-unsigned int lightDepthMaps;
-constexpr unsigned int depthMapResolution = 4096;
-std::vector<float> shadowCascadeLevels{4.0f, 10.0f, 50.0f};
-
-std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& projview)
-{
-    const auto inv = glm::inverse(projview);
-
-    std::vector<glm::vec4> frustumCorners;
-    for (unsigned int x = 0; x < 2; ++x)
-    {
-        for (unsigned int y = 0; y < 2; ++y)
-        {
-            for (unsigned int z = 0; z < 2; ++z)
-            {
-                const glm::vec4 pt = inv * glm::vec4(2.0f * x - 1.0f, 2.0f * y - 1.0f, 2.0f * z - 1.0f, 1.0f);
-                frustumCorners.push_back(pt / pt.w);
-            }
-        }
-    }
-
-    return frustumCorners;
-}
-
-std::vector<glm::vec4> getFrustumCornersWorldSpace(const glm::mat4& proj, const glm::mat4& view)
-{
-    return getFrustumCornersWorldSpace(proj * view);
-}
-
-glm::mat4 getLightSpaceMatrix(const float nearPlane, const float farPlane, DirectionalLight* light)
-{
-    const auto proj = glm::perspective(
-        glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, nearPlane,
-        farPlane);
-    const auto corners = getFrustumCornersWorldSpace(proj, camera.GetViewMatrix());
-
-    glm::vec3 center = glm::vec3(0, 0, 0);
-    for (const auto& v : corners)
-    {
-        center += glm::vec3(v);
-    }
-    center /= corners.size();
-
-    const auto lightView = glm::lookAt(center - light->lightDir, center, glm::vec3(0.0f, 1.0f, 0.0f));
-
-    float minX = std::numeric_limits<float>::max();
-    float maxX = std::numeric_limits<float>::lowest();
-    float minY = std::numeric_limits<float>::max();
-    float maxY = std::numeric_limits<float>::lowest();
-    float minZ = std::numeric_limits<float>::max();
-    float maxZ = std::numeric_limits<float>::lowest();
-    for (const auto& v : corners)
-    {
-        const auto trf = lightView * v;
-        minX = std::min(minX, trf.x);
-        maxX = std::max(maxX, trf.x);
-        minY = std::min(minY, trf.y);
-        maxY = std::max(maxY, trf.y);
-        minZ = std::min(minZ, trf.z);
-        maxZ = std::max(maxZ, trf.z);
-    }
-
-    // Tune this parameter according to the scene
-    constexpr float zMult = 10.0f;
-    if (minZ < 0)
-    {
-        minZ *= zMult;
-    }
-    else
-    {
-        minZ /= zMult;
-    }
-    if (maxZ < 0)
-    {
-        maxZ /= zMult;
-    }
-    else
-    {
-        maxZ *= zMult;
-    }
-
-    const glm::mat4 lightProjection = glm::ortho(minX, maxX, minY, maxY, minZ, maxZ);
-    return lightProjection * lightView;
-}
-
-std::vector<glm::mat4> getLightSpaceMatrices(DirectionalLight* light)
-{
-    std::vector<glm::mat4> ret;
-    float cameraNearPlane = 0.1f;
-    float cameraFarPlane = 100.0f;
-    for (size_t i = 0; i < shadowCascadeLevels.size() + 1; ++i)
-    {
-        if (i == 0)
-        {
-            ret.push_back(getLightSpaceMatrix(cameraNearPlane, shadowCascadeLevels[i], light));
-        }
-        else if (i < shadowCascadeLevels.size())
-        {
-            ret.push_back(getLightSpaceMatrix(shadowCascadeLevels[i - 1], shadowCascadeLevels[i], light));
-        }
-        else
-        {
-            ret.push_back(getLightSpaceMatrix(shadowCascadeLevels[i - 1], cameraFarPlane, light));
-        }
-    }
-    return ret;
-}
 
 int main()
 {
@@ -214,7 +102,6 @@ int main()
     // ------------------------------------
     Shader lightingShader("../shaders/shader_lighting.vs", "../shaders/shader_lighting.fs"); // you can name your shader files however you like
     Shader shadowShader("../shaders/shadow.vs", "../shaders/shadow.fs");
-    Shader csmShader("../shaders/csm.vs", "../shaders/csm.fs", "../shaders/csm.gs");
 
 
     // define models
@@ -352,36 +239,6 @@ int main()
     const char* causticFrameDirectory = "../resources/caustics/caustic_frames";
     CausticTexture causticTexture(causticFrameDirectory, causticFrameCount);
 
-    // I referenced this part from learnopengl Cascaded Shadow Mapping code
-    glGenFramebuffers(1, &lightFBO);
-
-    glGenTextures(1, &lightDepthMaps);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, lightDepthMaps);
-    glTexImage3D(
-        GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT32F, depthMapResolution, depthMapResolution, int(shadowCascadeLevels.size()) + 1,
-        0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-
-    constexpr float bordercolor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-    glTexParameterfv(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BORDER_COLOR, bordercolor);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, lightFBO);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, lightDepthMaps, 0);
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    unsigned int matricesUBO;
-    glGenBuffers(1, &matricesUBO);
-    glBindBuffer(GL_UNIFORM_BUFFER, matricesUBO);
-    glBufferData(GL_UNIFORM_BUFFER, sizeof(glm::mat4x4) * 16, nullptr, GL_STATIC_DRAW);
-    glBindBufferBase(GL_UNIFORM_BUFFER, 0, matricesUBO);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
     DirectionalLight sun(90.0f, 30.0f, glm::vec3(0.8f));
 
     float oldTime = 0;
@@ -419,60 +276,25 @@ int main()
         glm::mat4 lightView = sun.getViewMatrix(camera.Position);
         glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
-        if (useCSM) {
-            // I referenced this part from learnopengl Cascaded Shadow Mapping code
-            // set framebuffer to shadow framebuffer
-            glViewport(0, 0, depthMapResolution, depthMapResolution);
-            glBindFramebuffer(GL_FRAMEBUFFER, lightFBO);
-            glClear(GL_DEPTH_BUFFER_BIT);
-            
-            csmShader.use();
-            std::vector<glm::mat4> lightSpaceMatrices = getLightSpaceMatrices(&sun);
-            glBindBuffer(GL_UNIFORM_BUFFER, matricesUBO);
-            for (size_t i = 0; i < lightSpaceMatrices.size(); ++i) {
-                glBufferSubData(GL_UNIFORM_BUFFER, i * sizeof(glm::mat4x4), sizeof(glm::mat4x4), &lightSpaceMatrices[i]);
-            }
-            glBindBuffer(GL_UNIFORM_BUFFER, 0);
+        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+        glBindFramebuffer(GL_FRAMEBUFFER, depth.depthMapFBO);
+        glClear(GL_DEPTH_BUFFER_BIT);
 
-            for(map<Model*, vector<Entity*>>::iterator it = scene.entities.begin(); it != scene.entities.end(); it++) {
-                Model* model = it->first;
-                if (!model || model->ignoreShadow) continue;
-                for(Entity* entity : it->second) {
-                    glm::mat4 modelMatrix = entity->getModelMatrix();
-                    if (entity->boid) {
-                        modelMatrix = entity->boid->calculateBoid() * modelMatrix;
-                    }
-                    csmShader.setMat4("model", modelMatrix);
-                    for (const SubMesh& subMesh : model->subMeshes) {
-                        glBindVertexArray(subMesh.mesh.VAO);
-                        glDrawElements(GL_TRIANGLES, subMesh.mesh.indices.size(), GL_UNSIGNED_INT, 0);
-                    }
+        shadowShader.use();
+        shadowShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+
+        for(map<Model*, vector<Entity*>>::iterator it = scene.entities.begin(); it != scene.entities.end(); it++) {
+            Model* model = it->first;
+            if (!model || model->ignoreShadow) continue;
+            for(Entity* entity : it->second) {
+                glm::mat4 modelMatrix = entity->getModelMatrix();
+                if (entity->boid) {
+                    modelMatrix = entity->boid->calculateBoid() * modelMatrix;
                 }
-            }
-        }
-        else {
-            // I referenced this part from learnopengl shadow code
-            // set framebuffer to shadow framebuffer
-            glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-            glBindFramebuffer(GL_FRAMEBUFFER, depth.depthMapFBO);
-            glClear(GL_DEPTH_BUFFER_BIT);
-
-            shadowShader.use();
-            shadowShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-
-            for(map<Model*, vector<Entity*>>::iterator it = scene.entities.begin(); it != scene.entities.end(); it++) {
-                Model* model = it->first;
-                if (!model || model->ignoreShadow) continue;
-                for(Entity* entity : it->second) {
-                    glm::mat4 modelMatrix = entity->getModelMatrix();
-                    if (entity->boid) {
-                        modelMatrix = entity->boid->calculateBoid() * modelMatrix;
-                    }
-                    shadowShader.setMat4("model", modelMatrix);
-                    for (const SubMesh& subMesh : model->subMeshes) {
-                        glBindVertexArray(subMesh.mesh.VAO);
-                        glDrawElements(GL_TRIANGLES, subMesh.mesh.indices.size(), GL_UNSIGNED_INT, 0);
-                    }
+                shadowShader.setMat4("model", modelMatrix);
+                for (const SubMesh& subMesh : model->subMeshes) {
+                    glBindVertexArray(subMesh.mesh.VAO);
+                    glDrawElements(GL_TRIANGLES, subMesh.mesh.indices.size(), GL_UNSIGNED_INT, 0);
                 }
             }
         }
@@ -490,7 +312,7 @@ int main()
             // shader : shader_lighting.fs/vs
 
         // I referenced this part from learnopengl lighting and shadow code
-        // set use lighting, use shadow, usePCF, useCSM to shader
+        // set use lighting, use shadow, usePCF to shader
         lightingShader.use();
         if (useLighting) lightingShader.setFloat("useLighting", 1.0f);
         else lightingShader.setFloat("useLighting", 0.0f);
@@ -498,8 +320,6 @@ int main()
         else lightingShader.setFloat("useShadow", 0.0f);
         if (usePCF) lightingShader.setFloat("usePCF", 1.0f);
         else lightingShader.setFloat("usePCF", 0.0f);
-        if (useCSM) lightingShader.setFloat("useCSM", 1.0f);
-        else lightingShader.setFloat("useCSM", 0.0f);
 
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
@@ -519,18 +339,8 @@ int main()
         glActiveTexture(GL_TEXTURE3);
         glBindTexture(GL_TEXTURE_2D, depth.ID);
 
-        // I referenced this part from learnopengl Cascaded Shadow Mapping code
-        // bind light depth map to texture unit 4
-        glActiveTexture(GL_TEXTURE4);
-        glBindTexture(GL_TEXTURE_2D_ARRAY, lightDepthMaps);
-        lightingShader.setInt("csmDepthMapSampler", 4);
         glActiveTexture(GL_TEXTURE5);
         glBindTexture(GL_TEXTURE_2D_ARRAY, causticTexture.ID);
-        lightingShader.setInt("cascadeCount", shadowCascadeLevels.size());
-        for (size_t i = 0; i < shadowCascadeLevels.size(); ++i)
-        {
-            lightingShader.setFloat("cascadePlaneDistances[" + std::to_string(i) + "]", shadowCascadeLevels[i]);
-        }
 
         // Iterate using map<Model*, vector<Entity*>>::iterator it = scene.entities.begin()
         for(map<Model*, vector<Entity*>>::iterator it = scene.entities.begin(); it != scene.entities.end(); it++) {
@@ -655,15 +465,6 @@ void processInput(GLFWwindow* window, DirectionalLight* sun)
     }
     if (glfwGetKey(window, GLFW_KEY_4) == GLFW_RELEASE) {
         isKeyboardDone[GLFW_KEY_4] = false;
-    }
-
-    // key 5: CSM
-    if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS && isKeyboardDone[GLFW_KEY_5] == false) {
-        isKeyboardDone[GLFW_KEY_5] = true;
-        useCSM = !useCSM;
-    }
-    if (glfwGetKey(window, GLFW_KEY_5) == GLFW_RELEASE) {
-        isKeyboardDone[GLFW_KEY_5] = false;
     }
 
 }
