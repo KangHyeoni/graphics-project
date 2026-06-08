@@ -30,14 +30,16 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 void initAccumTargets(int width, int height);
 void resizeAccumTargets(int width, int height);
+void initSceneTarget(int width, int height);
+void resizeSceneTarget(int width, int height);
 float getGroundTempAtTime(float renderTime);
 
 bool isWindowed = true;
 bool isKeyboardDone[1024] = { 0 };
 
 // setting
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+const unsigned int SCR_WIDTH = 1920;
+const unsigned int SCR_HEIGHT = 1080;
 
 int framebufferWidth = SCR_WIDTH;
 int framebufferHeight = SCR_HEIGHT;
@@ -55,6 +57,8 @@ float lastFrame = 0.0f;
 // Optional accumulation targets for Figure 1(h).
 unsigned int accumFBO = 0;
 unsigned int accumTex[2] = { 0, 0 };
+unsigned int sceneFBO = 0;
+unsigned int sceneColorTexture = 0;
 
 // For temperature
 float groundTemp = 210.0f;
@@ -199,6 +203,7 @@ int main(int argc, char** argv)
     // build and compile our shader program
     // ------------------------------------
     Shader rayTracingShader("../shaders/shader_ray_tracing.vs", "../shaders/shader_ray_tracing.fs");
+    Shader heatHazeShader("../shaders/shader_ray_tracing.vs", "../shaders/shader_heat_haze.fs");
 
     std::vector<float> quad_data({
         // positions         // uvs
@@ -211,6 +216,7 @@ int main(int argc, char** argv)
     std::vector<unsigned int> attrib_sizes({ 3, 2 });
 
     VAO* quad = getVAOFromAttribData(quad_data, attrib_sizes, quad_indices_vec);
+    initSceneTarget(framebufferWidth, framebufferHeight);
 
     // Original skybox data (works well)
     //std::vector<std::string> faces
@@ -262,6 +268,9 @@ int main(int argc, char** argv)
     rayTracingShader.setVec3("material_sphere_middle.albedo", glm::vec3(0.3, 0.3, 0.8));
     rayTracingShader.setInt("material_sphere_middle.material_type", 0); // diffuse
 
+    heatHazeShader.use();
+    heatHazeShader.setInt("sceneTexture", 0);
+
     glm::mat4 viewMatBefore = camera.GetViewMatrix();
     float zoomBefore = camera.Zoom;
 
@@ -311,7 +320,7 @@ int main(int argc, char** argv)
         rayTracingShader.setFloat("time", noiseTime);
 
         
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, sceneFBO);
         glViewport(0, 0, framebufferWidth, framebufferHeight);
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -344,6 +353,19 @@ int main(int argc, char** argv)
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         }
 
+        heatHazeShader.use();
+        heatHazeShader.setFloat("time", noiseTime);
+        heatHazeShader.setVec2("resolution", static_cast<float>(framebufferWidth), static_cast<float>(framebufferHeight));
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, framebufferWidth, framebufferHeight);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, sceneColorTexture);
+
+        glBindVertexArray(quad->ID);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
         // input
         if (offline.enabled) {
             glFinish();
@@ -375,6 +397,8 @@ int main(int argc, char** argv)
 
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
+    if (sceneColorTexture) glDeleteTextures(1, &sceneColorTexture);
+    if (sceneFBO) glDeleteFramebuffers(1, &sceneFBO);
     //glDeleteVertexArrays(1,&VAOcube);
     //glDeleteBuffers(1, VBOcube);
     //glDeleteVertexArrays(1, &VAOquad);
@@ -456,6 +480,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     // height will be significantly larger than specified on retina displays.
     framebufferWidth = width;
     framebufferHeight = height;
+    resizeSceneTarget(width, height);
     glViewport(0, 0, width, height);
 }
 
@@ -516,5 +541,40 @@ void resizeAccumTargets(int width, int height) {
         glBindTexture(GL_TEXTURE_2D, accumTex[i]);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, nullptr);
     }
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void initSceneTarget(int width, int height) {
+    if (sceneFBO == 0) {
+        glGenFramebuffers(1, &sceneFBO);
+    }
+    if (sceneColorTexture == 0) {
+        glGenTextures(1, &sceneColorTexture);
+    }
+
+    glBindTexture(GL_TEXTURE_2D, sceneColorTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, sceneFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, sceneColorTexture, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        std::cout << "Scene framebuffer is not complete." << std::endl;
+    }
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void resizeSceneTarget(int width, int height) {
+    if (width <= 0 || height <= 0 || sceneColorTexture == 0) {
+        return;
+    }
+
+    glBindTexture(GL_TEXTURE_2D, sceneColorTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
