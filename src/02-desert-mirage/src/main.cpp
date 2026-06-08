@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cmath>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
@@ -34,6 +35,8 @@ void initSceneTarget(int width, int height);
 void resizeSceneTarget(int width, int height);
 float getGroundTempAtTime(float renderTime);
 float getHazeAmountAtTime(float renderTime, float currentGroundTemp);
+void drawModelEntities(Shader& shader, const std::vector<Entity*>& entities);
+glm::vec3 getDirectionalLightDir(float azimuth, float elevation);
 
 bool isWindowed = true;
 bool isKeyboardDone[1024] = { 0 };
@@ -134,6 +137,36 @@ void createDirectoryIfNeeded(const char* path)
     mkdir(path, 0755);
 }
 
+glm::vec3 getDirectionalLightDir(float azimuth, float elevation)
+{
+    float dirX = -std::cos(glm::radians(elevation)) * std::cos(glm::radians(azimuth));
+    float dirY = -std::sin(glm::radians(elevation));
+    float dirZ = -std::cos(glm::radians(elevation)) * std::sin(glm::radians(azimuth));
+    return glm::normalize(glm::vec3(dirX, dirY, dirZ));
+}
+
+void drawModelEntities(Shader& shader, const std::vector<Entity*>& entities)
+{
+    for (Entity* entity : entities) {
+        if (!entity || !entity->model) {
+            continue;
+        }
+
+        shader.setMat4("world", entity->getModelMatrix());
+
+        for (const SubMesh& subMesh : entity->model->subMeshes) {
+            shader.setFloat("useDiffuseMap", subMesh.diffuse ? 1.0f : 0.0f);
+            shader.setVec3("baseColor", subMesh.baseColor);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, subMesh.diffuse ? subMesh.diffuse->ID : Texture::GetDummyTexture());
+
+            glBindVertexArray(subMesh.mesh.VAO);
+            glDrawElements(GL_TRIANGLES, subMesh.mesh.indices.size(), GL_UNSIGNED_INT, 0);
+        }
+    }
+}
+
 int main(int argc, char** argv)
 {
     std::cout << "Current main.cpp: hw5_real_final" << std::endl;
@@ -227,6 +260,7 @@ int main(int argc, char** argv)
     // ------------------------------------
     Shader rayTracingShader("../shaders/shader_ray_tracing.vs", "../shaders/shader_ray_tracing.fs");
     Shader heatHazeShader("../shaders/shader_ray_tracing.vs", "../shaders/shader_heat_haze.fs");
+    Shader desertModelShader("../shaders/shader_desert_model.vs", "../shaders/shader_desert_model.fs");
 
     std::vector<float> quad_data({
         // positions         // uvs
@@ -269,6 +303,28 @@ int main(int argc, char** argv)
     Texture objectTex("../resources/pyramid/sandstone_diff.jpg");
     Texture groundTex("../resources/pyramid/desert_sand_floor.jpg");
 
+    Model houseModel("../../00-main/resources/room/Warehouse.obj");
+    Model sofaModel("../../00-main/resources/sofa/sofa.obj");
+    Model tableModel("../../00-main/resources/table/Center Table.obj");
+
+    std::vector<Entity*> houseEntities;
+    const glm::vec3 mainCameraStart = glm::vec3(0.0f, 1.5f, 0.5f);
+    const glm::vec3 mainSceneOffset = glm::vec3(-2.0f, 0.0f, 4.0f);
+    const glm::vec3 mainHousePosition = glm::vec3(2.0f, 0.0f, -4.0f) + mainSceneOffset;
+    const glm::vec3 housePosition = camera.Position + (mainHousePosition - mainCameraStart);
+    const float furnitureTurnY = 180.0f;
+    auto mapMainPosition = [housePosition, mainHousePosition](glm::vec3 mainPosition) {
+        return housePosition + (mainPosition - mainHousePosition);
+    };
+    auto rotateInHouse = [housePosition](glm::vec3 position) {
+        glm::vec3 local = position - housePosition;
+        return housePosition + glm::vec3(-local.x, local.y, -local.z);
+    };
+
+    houseEntities.push_back(new Entity(&houseModel, housePosition, 0.0f, 90.0f, 0.0f, 1.0f));
+    houseEntities.push_back(new Entity(&sofaModel, rotateInHouse(mapMainPosition(glm::vec3(-0.5f, 0.1f, -3.5f) + mainSceneOffset)), 0.0f, furnitureTurnY, 0.0f, 0.5f));
+    houseEntities.push_back(new Entity(&tableModel, rotateInHouse(mapMainPosition(glm::vec3(4.5f, 0.0f, -3.0f) + mainSceneOffset)), 0.0f, furnitureTurnY, 0.0f, 1.2f));
+
     unsigned int vs_ubo = glGetUniformBlockIndex(rayTracingShader.ID, "mesh_vertices_ubo");
     glUniformBlockBinding(rayTracingShader.ID, vs_ubo, 0);
 
@@ -294,6 +350,11 @@ int main(int argc, char** argv)
     heatHazeShader.use();
     heatHazeShader.setInt("sceneTexture", 0);
     heatHazeShader.setFloat("hazeAmount", 0.0f);
+
+    desertModelShader.use();
+    desertModelShader.setInt("diffuseTexture", 0);
+    desertModelShader.setVec3("light.dir", getDirectionalLightDir(-90.0f, 45.0f));
+    desertModelShader.setVec3("light.color", glm::vec3(1.0f));
 
     glm::mat4 viewMatBefore = camera.GetViewMatrix();
     float zoomBefore = camera.Zoom;
@@ -390,6 +451,19 @@ int main(int argc, char** argv)
 
         glBindVertexArray(quad->ID);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+        glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        desertModelShader.use();
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), static_cast<float>(framebufferWidth) / static_cast<float>(framebufferHeight), 0.1f, 100.0f);
+        glm::mat4 view = camera.GetViewMatrix();
+        desertModelShader.setMat4("projection", projection);
+        desertModelShader.setMat4("view", view);
+        drawModelEntities(desertModelShader, houseEntities);
+
+        glDisable(GL_DEPTH_TEST);
 
         // input
         if (offline.enabled) {
