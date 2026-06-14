@@ -23,20 +23,13 @@
 #include "animation/animator.h"
 // #include "animation/spline_path.h"
 #include "animation/boid.h"
-#include "FreeImage.h"
-#include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <ctime>
-#include <sys/stat.h>
-#include <sys/types.h>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window, DirectionalLight* sun);
-void saveImage(const char* filename);
-void createDirectoryIfNeeded(const char* path);
 
 bool isWindowed = true;
 bool isKeyboardDone[1024] = { 0 };
@@ -68,77 +61,9 @@ bool useLighting = true;
 bool useShadow = true;
 bool usePCF = false;
 
-struct OfflineRenderConfig {
-    bool enabled = false;
-    int fps = 30;
-    int frameCount = 300;
-    int tileSize = 128;
-    float startTime = 0.0f;
-    const char* outputDir = "offline_frames";
-};
-
-void saveImage(const char* filename)
+int main()
 {
-    int width = framebufferWidth;
-    int height = framebufferHeight;
-    BYTE* pixels = new BYTE[3 * width * height];
-    glReadPixels(0, 0, width, height, GL_BGR, GL_UNSIGNED_BYTE, pixels);
-
-    FIBITMAP* image = FreeImage_ConvertFromRawBits(
-        pixels,
-        width,
-        height,
-        3 * width,
-        24,
-        0xFF0000,
-        0x00FF00,
-        0x0000FF,
-        false
-    );
-    FreeImage_Save(FIF_PNG, image, filename, 0);
-    FreeImage_Unload(image);
-    delete[] pixels;
-}
-
-void createDirectoryIfNeeded(const char* path)
-{
-    mkdir(path, 0755);
-}
-
-int main(int argc, char** argv)
-{
-    OfflineRenderConfig offline;
-    for (int i = 1; i < argc; ++i) {
-        if (std::strcmp(argv[i], "--offline") == 0) {
-            offline.enabled = true;
-        }
-        else if (std::strcmp(argv[i], "--fps") == 0 && i + 1 < argc) {
-            offline.fps = std::max(1, std::atoi(argv[++i]));
-        }
-        else if (std::strcmp(argv[i], "--frames") == 0 && i + 1 < argc) {
-            offline.frameCount = std::max(1, std::atoi(argv[++i]));
-        }
-        else if (std::strcmp(argv[i], "--tile-size") == 0 && i + 1 < argc) {
-            offline.tileSize = std::max(16, std::atoi(argv[++i]));
-        }
-        else if (std::strcmp(argv[i], "--start-time") == 0 && i + 1 < argc) {
-            offline.startTime = std::max(0.0f, static_cast<float>(std::atof(argv[++i])));
-        }
-        else if (std::strcmp(argv[i], "--output") == 0 && i + 1 < argc) {
-            offline.outputDir = argv[++i];
-        }
-    }
-
-    if (offline.enabled) {
-        createDirectoryIfNeeded(offline.outputDir);
-        std::cout << "Offline rendering: " << offline.frameCount
-                  << " frames at " << offline.fps
-                  << " fps from t=" << offline.startTime
-                  << ", tile " << offline.tileSize
-                  << " -> " << offline.outputDir << std::endl;
-    }
-
-    std::srand(offline.enabled ? 1u : static_cast<unsigned int>(std::time(nullptr)));
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
     // glfw: initialize and configure
     // ------------------------------
@@ -146,15 +71,9 @@ int main(int argc, char** argv)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    if (offline.enabled) {
-        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-    }
 
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // uncomment this statement to fix compilation on OS X
-    if (offline.enabled) {
-        glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE);
-    }
 #endif
 
     // glfw window creation
@@ -168,13 +87,11 @@ int main(int argc, char** argv)
     }
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    if (!offline.enabled) {
-        glfwSetCursorPosCallback(window, mouse_callback);
-        glfwSetScrollCallback(window, scroll_callback);
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetScrollCallback(window, scroll_callback);
 
-        // tell GLFW to capture our mouse
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    }
+    // tell GLFW to capture our mouse
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     // glad: load all OpenGL function pointers
     // ---------------------------------------
@@ -189,36 +106,6 @@ int main(int argc, char** argv)
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
-
-    unsigned int offlineFBO = 0;
-    unsigned int offlineColorTexture = 0;
-    unsigned int offlineDepthRBO = 0;
-    if (offline.enabled) {
-        glGenFramebuffers(1, &offlineFBO);
-        glBindFramebuffer(GL_FRAMEBUFFER, offlineFBO);
-
-        glGenTextures(1, &offlineColorTexture);
-        glBindTexture(GL_TEXTURE_2D, offlineColorTexture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, offlineColorTexture, 0);
-
-        glGenRenderbuffers(1, &offlineDepthRBO);
-        glBindRenderbuffer(GL_RENDERBUFFER, offlineDepthRBO);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, offlineDepthRBO);
-
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            std::cout << "Failed to create offline framebuffer" << std::endl;
-            glfwTerminate();
-            return -1;
-        }
-
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        framebufferWidth = SCR_WIDTH;
-        framebufferHeight = SCR_HEIGHT;
-    }
 
     // build and compile our shader program
     // ------------------------------------
@@ -378,73 +265,16 @@ int main(int argc, char** argv)
 
     DirectionalLight sun(-90.0f, 45.0f, glm::vec3(1.0f));
 
-    const glm::vec3 offlineCameraBasePosition = camera.Position;
-    auto frameProgress = [](int frame, int startFrame, int endFrame) {
-        return glm::clamp(
-            static_cast<float>(frame - startFrame) / static_cast<float>(endFrame - startFrame),
-            0.0f,
-            1.0f
-        );
-    };
-
-    float oldTime = offline.enabled ? offline.startTime : static_cast<float>(glfwGetTime());
-    int offlineFrameIndex = 0;
+    float oldTime = static_cast<float>(glfwGetTime());
     while (!glfwWindowShouldClose(window))// render loop
     {
-        float currentTime = offline.enabled
-            ? offline.startTime + static_cast<float>(offlineFrameIndex) / static_cast<float>(offline.fps)
-            : static_cast<float>(glfwGetTime());
-        float dt = offline.enabled ? 1.0f / static_cast<float>(offline.fps) : currentTime - oldTime;
+        float currentTime = static_cast<float>(glfwGetTime());
+        float dt = currentTime - oldTime;
         deltaTime = dt;
         oldTime = currentTime;
 
         // input
-        if (!offline.enabled) {
-            processInput(window, &sun);
-        }
-        else {
-            float cameraZ = 0.5f;
-            if (offlineFrameIndex >= 30 && offlineFrameIndex <= 60) {
-                cameraZ = glm::mix(0.5f, -1.5f, frameProgress(offlineFrameIndex, 30, 60));
-            }
-            else if (offlineFrameIndex > 60 && offlineFrameIndex < 540) {
-                cameraZ = -1.5f;
-            }
-            else if (offlineFrameIndex >= 540 && offlineFrameIndex <= 570) {
-                cameraZ = glm::mix(-1.5f, 0.5f, frameProgress(offlineFrameIndex, 540, 570));
-            }
-
-            float pitch = 0.0f;
-            if (offlineFrameIndex >= 60 && offlineFrameIndex <= 90) {
-                pitch = glm::mix(0.0f, 20.0f, frameProgress(offlineFrameIndex, 60, 90));
-            }
-            else if (offlineFrameIndex > 90 && offlineFrameIndex < 480) {
-                pitch = 20.0f;
-            }
-            else if (offlineFrameIndex >= 480 && offlineFrameIndex <= 540) {
-                pitch = glm::mix(20.0f, 0.0f, frameProgress(offlineFrameIndex, 480, 540));
-            }
-
-            float yaw = -90.0f;
-            if (offlineFrameIndex >= 210 && offlineFrameIndex <= 240) {
-                yaw = glm::mix(-90.0f, -110.0f, frameProgress(offlineFrameIndex, 210, 240));
-            }
-            else if (offlineFrameIndex > 240 && offlineFrameIndex < 330) {
-                yaw = -110.0f;
-            }
-            else if (offlineFrameIndex >= 330 && offlineFrameIndex <= 360) {
-                yaw = glm::mix(-110.0f, -70.0f, frameProgress(offlineFrameIndex, 330, 360));
-            }
-            else if (offlineFrameIndex > 360 && offlineFrameIndex < 450) {
-                yaw = -70.0f;
-            }
-            else if (offlineFrameIndex >= 450 && offlineFrameIndex <= 480) {
-                yaw = glm::mix(-70.0f, -90.0f, frameProgress(offlineFrameIndex, 450, 480));
-            }
-
-            camera.Position = glm::vec3(offlineCameraBasePosition.x, offlineCameraBasePosition.y, cameraZ);
-            camera.SetAngles(yaw, pitch);
-        }
+        processInput(window, &sun);
         bassAnimator.UpdateAnimation(2*deltaTime);
         sharkAnimator.UpdateAnimation(deltaTime);
 
@@ -493,19 +323,12 @@ int main(int argc, char** argv)
             }
         }
 
-        if (offline.enabled) {
-            glBindFramebuffer(GL_FRAMEBUFFER, offlineFBO);
-            framebufferWidth = SCR_WIDTH;
-            framebufferHeight = SCR_HEIGHT;
-        }
-        else {
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            int windowFramebufferWidth = 0;
-            int windowFramebufferHeight = 0;
-            glfwGetFramebufferSize(window, &windowFramebufferWidth, &windowFramebufferHeight);
-            framebufferWidth = windowFramebufferWidth;
-            framebufferHeight = windowFramebufferHeight;
-        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        int windowFramebufferWidth = 0;
+        int windowFramebufferHeight = 0;
+        glfwGetFramebufferSize(window, &windowFramebufferWidth, &windowFramebufferHeight);
+        framebufferWidth = windowFramebufferWidth;
+        framebufferHeight = windowFramebufferHeight;
 
         int currentWidth = framebufferWidth;
         int currentHeight = framebufferHeight;
@@ -591,37 +414,14 @@ int main(int argc, char** argv)
             }
         }
 
-        if (offline.enabled) {
-            glFinish();
-
-            char filename[256];
-            std::snprintf(filename, sizeof(filename), "%s/frame_%04d.png", offline.outputDir, offlineFrameIndex);
-            saveImage(filename);
-
-            if (offlineFrameIndex % offline.fps == 0) {
-                std::cout << "Saved " << filename << std::endl;
-            }
-
-            ++offlineFrameIndex;
-            if (offlineFrameIndex >= offline.frameCount) {
-                glfwSetWindowShouldClose(window, true);
-            }
-            glfwPollEvents();
-        }
-        else {
-            // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-            // -------------------------------------------------------------------------------
-            glfwSwapBuffers(window);
-            glfwPollEvents();
-        }
+        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+        // -------------------------------------------------------------------------------
+        glfwSwapBuffers(window);
+        glfwPollEvents();
     }
 
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
-
-    if (offlineColorTexture) glDeleteTextures(1, &offlineColorTexture);
-    if (offlineDepthRBO) glDeleteRenderbuffers(1, &offlineDepthRBO);
-    if (offlineFBO) glDeleteFramebuffers(1, &offlineFBO);
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------

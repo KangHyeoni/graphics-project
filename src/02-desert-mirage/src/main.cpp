@@ -15,15 +15,8 @@
 #include "texture_cube.h"
 #include "model.h"
 #include "mesh.h"
-#include "FreeImage.h"
 #include <algorithm>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
 #include <cmath>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <time.h>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -77,35 +70,9 @@ constexpr float TEMPERATURE_OUTRO_HOLD_SECONDS = 6.0f;
 constexpr float TEMPERATURE_TOTAL_SECONDS =
     TEMPERATURE_INTRO_HOLD_SECONDS + TEMPERATURE_ANIMATION_SECONDS + TEMPERATURE_OUTRO_HOLD_SECONDS;
 
-struct OfflineRenderConfig {
-    bool enabled = false;
-    int fps = 30;
-    int frameCount = 960;
-    int tileSize = 128;
-    const char* outputDir = "offline_frames";
-};
-
 void test()
 {
     std::cout << groundTemp << std::endl;
-}
-
-// Save Image to png file. press V key.
-// file name : date.png (created in bin folder)
-void saveImage(const char* filename) {
-    // Make the BYTE array, factor of 3 because it's RBG.
-    int width = framebufferWidth;
-    int height = framebufferHeight;
-    BYTE* pixels = new BYTE[3 * width * height];
-    glReadPixels(0, 0, width, height, GL_BGR, GL_UNSIGNED_BYTE, pixels);
-
-    // Convert to FreeImage format & save to file
-    FIBITMAP* image = FreeImage_ConvertFromRawBits(pixels, width, height, 3 * width, 24, 0xFF0000, 0x00FF00, 0x0000FF, false);
-    FreeImage_Save(FIF_PNG, image, filename, 0);
-
-    // Free resources
-    FreeImage_Unload(image);
-    delete[] pixels;
 }
 
 float getGroundTempAtTime(float renderTime)
@@ -139,11 +106,6 @@ float getHazeAmountAtTime(float renderTime, float currentGroundTemp)
     return hasHeat * ramp;
 }
 
-void createDirectoryIfNeeded(const char* path)
-{
-    mkdir(path, 0755);
-}
-
 glm::vec3 getDirectionalLightDir(float azimuth, float elevation)
 {
     float dirX = -std::cos(glm::radians(elevation)) * std::cos(glm::radians(azimuth));
@@ -174,44 +136,9 @@ void drawModelEntities(Shader& shader, const std::vector<Entity*>& entities)
     }
 }
 
-int main(int argc, char** argv)
+int main()
 {
     std::cout << "Current main.cpp: hw5_real_final" << std::endl;
-
-    OfflineRenderConfig offline;
-    bool frameCountProvided = false;
-    for (int i = 1; i < argc; ++i) {
-        if (std::strcmp(argv[i], "--offline") == 0) {
-            offline.enabled = true;
-        }
-        else if (std::strcmp(argv[i], "--fps") == 0 && i + 1 < argc) {
-            offline.fps = std::max(1, std::atoi(argv[++i]));
-        }
-        else if (std::strcmp(argv[i], "--frames") == 0 && i + 1 < argc) {
-            offline.frameCount = std::max(1, std::atoi(argv[++i]));
-            frameCountProvided = true;
-        }
-        else if (std::strcmp(argv[i], "--tile-size") == 0 && i + 1 < argc) {
-            offline.tileSize = std::max(16, std::atoi(argv[++i]));
-        }
-        else if (std::strcmp(argv[i], "--start-time") == 0 && i + 1 < argc) {
-            ++i;
-        }
-        else if (std::strcmp(argv[i], "--output") == 0 && i + 1 < argc) {
-            offline.outputDir = argv[++i];
-        }
-    }
-    if (offline.enabled) {
-        if (!frameCountProvided) {
-            offline.frameCount = std::max(1, static_cast<int>(std::ceil(offline.fps * TEMPERATURE_TOTAL_SECONDS)));
-        }
-        createDirectoryIfNeeded(offline.outputDir);
-        std::cout << "Offline rendering: " << offline.frameCount
-                  << " frames at " << offline.fps
-                  << " fps, temperature timeline 0-" << TEMPERATURE_TOTAL_SECONDS << "s"
-                  << ", tile " << offline.tileSize
-                  << " -> " << offline.outputDir << std::endl;
-    }
 
     // glfw: initialize and configure
     // ------------------------------
@@ -219,15 +146,9 @@ int main(int argc, char** argv)
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    if (offline.enabled) {
-        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-    }
 
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // uncomment this statement to fix compilation on OS X
-    if (offline.enabled) {
-        glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE);
-    }
 #endif
 
     // glfw window creation
@@ -242,13 +163,11 @@ int main(int argc, char** argv)
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-    if (!offline.enabled) {
-        glfwSetCursorPosCallback(window, mouse_callback);
-        glfwSetScrollCallback(window, scroll_callback);
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetScrollCallback(window, scroll_callback);
 
-        // tell GLFW to capture our mouse
-        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    }
+    // tell GLFW to capture our mouse
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     // glad: load all OpenGL function pointers
     // ---------------------------------------
@@ -259,10 +178,6 @@ int main(int argc, char** argv)
     }
 
     glfwGetFramebufferSize(window, &framebufferWidth, &framebufferHeight);
-    if (offline.enabled) {
-        framebufferWidth = SCR_WIDTH;
-        framebufferHeight = SCR_HEIGHT;
-    }
 
     // configure global opengl state
     // -----------------------------
@@ -373,23 +288,15 @@ int main(int argc, char** argv)
     float zoomBefore = camera.Zoom;
 
     // Added: For quick camera movement
-    float lastFrame = glfwGetTime();
-    int offlineFrameIndex = 0;
+    lastFrame = glfwGetTime();
 
     while (!glfwWindowShouldClose(window))// render loop
     {
         // For quick camera movement
-        float elapsedTime = offline.enabled
-            ? static_cast<float>(offlineFrameIndex) / static_cast<float>(offline.fps)
-            : static_cast<float>(glfwGetTime());
+        float elapsedTime = static_cast<float>(glfwGetTime());
         float temperatureTime = getTemperatureRenderTime(elapsedTime);
-        if (offline.enabled) {
-            deltaTime = 1.0f / static_cast<float>(offline.fps);
-        }
-        else {
-            deltaTime = elapsedTime - lastFrame;
-            lastFrame = elapsedTime;
-        }
+        deltaTime = elapsedTime - lastFrame;
+        lastFrame = elapsedTime;
 
         // [Project] Animate temperature change
         groundTemp = getGroundTempAtTime(temperatureTime);
@@ -424,23 +331,7 @@ int main(int argc, char** argv)
         // --
 
         glBindVertexArray(quad->ID);
-        if (offline.enabled) {
-            glEnable(GL_SCISSOR_TEST);
-            for (int y = 0; y < framebufferHeight; y += offline.tileSize) {
-                int tileHeight = std::min(offline.tileSize, framebufferHeight - y);
-                for (int x = 0; x < framebufferWidth; x += offline.tileSize) {
-                    int tileWidth = std::min(offline.tileSize, framebufferWidth - x);
-                    glScissor(x, y, tileWidth, tileHeight);
-                    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-                    glFinish();
-                    glfwPollEvents();
-                }
-            }
-            glDisable(GL_SCISSOR_TEST);
-        }
-        else {
-            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        }
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         heatHazeShader.use();
         heatHazeShader.setFloat("time", noiseTime);
@@ -470,33 +361,12 @@ int main(int argc, char** argv)
 
         glDisable(GL_DEPTH_TEST);
 
-        // input
-        if (offline.enabled) {
-            glFinish();
+        processInput(window);
 
-            char filename[256];
-            std::snprintf(filename, sizeof(filename), "%s/frame_%04d.png", offline.outputDir, offlineFrameIndex);
-            saveImage(filename);
-
-            if (offlineFrameIndex % offline.fps == 0) {
-                std::cout << "Saved " << filename << std::endl;
-            }
-
-            ++offlineFrameIndex;
-            if (offlineFrameIndex >= offline.frameCount) {
-                glfwSetWindowShouldClose(window, true);
-            }
-        }
-        else {
-            processInput(window);
-        }
-
-        if (!offline.enabled) {
-            // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-            // -------------------------------------------------------------------------------
-            glfwSwapBuffers(window);
-            glfwPollEvents();
-        }
+        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+        // -------------------------------------------------------------------------------
+        glfwSwapBuffers(window);
+        glfwPollEvents();
     }
 
     // optional: de-allocate all resources once they've outlived their purpose:
@@ -543,18 +413,6 @@ void processInput(GLFWwindow* window)
     if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS) {
         std::cout << "Position" << camera.Position.x << "," << camera.Position.y << "," << camera.Position.z << std::endl;
         std::cout << "Yaw" << camera.Yaw << std::endl;
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS && isKeyboardDone[GLFW_KEY_V] == false) {
-        time_t t = time(NULL);
-        struct tm tm = *localtime(&t);
-        char date_char[128];
-        std::snprintf(date_char, sizeof(date_char), "%d_%d_%d_%d_%d_%d.png", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-        saveImage(date_char);
-        isKeyboardDone[GLFW_KEY_V] = true;
-    }
-    else if (glfwGetKey(window, GLFW_KEY_V) == GLFW_RELEASE) {
-        isKeyboardDone[GLFW_KEY_V] = false;
     }
 
     // Temperature control
