@@ -14,7 +14,7 @@
 #include "../../00-main/src/shared/camera.h"
 #include "../../00-main/src/shared/texture.h"
 #include "../../00-main/src/shared/texture_cube.h"
-#include "model.h"
+#include "../../00-main/src/shared/model.h"
 #include "../../00-main/src/shared/mesh.h"
 #include "../../00-main/src/shared/scene.h"
 #include "../../00-main/src/shared/math_utils.h"

@@ -13,7 +13,7 @@
 #include <vector>
 #include "../../00-main/src/shared/camera.h"
 #include "../../00-main/src/shared/texture.h"
-#include "model.h"
+#include "../../00-main/src/shared/model.h"
 #include "../../00-main/src/shared/mesh.h"
 #include "../../00-main/src/shared/scene.h"
 #include "../../00-main/src/shared/math_utils.h"
@@ -133,15 +133,15 @@ int main()
     sharkModel.radius *= 2;
     sharkModel.length *= 2;
 
-    Model shellModel = Model("../../00-main/resources/3-underwater/seashell/seashell1/seashell1.obj");
-    Model shell2Model = Model("../../00-main/resources/3-underwater/seashell/seashell2/seashell2.obj");
-    Model pebbleModel = Model("../../00-main/resources/3-underwater/seashell/pebble/pebble.obj");
-    Model boatModel = Model("../../00-main/resources/3-underwater/wooden_boat/wooden_boat.obj");
+    Model shellModel = Model("../../00-main/resources/3-underwater/seashell/seashell1/seashell1.obj", false, true, true);
+    Model shell2Model = Model("../../00-main/resources/3-underwater/seashell/seashell2/seashell2.obj", false, true, true);
+    Model pebbleModel = Model("../../00-main/resources/3-underwater/seashell/pebble/pebble.obj", false, true, true);
+    Model boatModel = Model("../../00-main/resources/3-underwater/wooden_boat/wooden_boat.obj", false, true, true);
 
-    Model floorModel = Model("../../00-main/resources/3-underwater/mountain/mountain.obj", true);
-    Model houseModel = Model("../../00-main/resources/0-main/room/Warehouse.obj", false, false);
-    Model sofaModel = Model("../../00-main/resources/0-main/sofa/sofa.obj", false, false);
-    Model tableModel = Model("../../00-main/resources/0-main/table/Center Table.obj", false, false);
+    Model floorModel = Model("../../00-main/resources/3-underwater/mountain/mountain.obj", true, true, true);
+    Model houseModel = Model("../../00-main/resources/0-main/room/Warehouse.obj", false, false, true);
+    Model sofaModel = Model("../../00-main/resources/0-main/sofa/sofa.obj", false, false, true);
+    Model tableModel = Model("../../00-main/resources/0-main/table/Center Table.obj", false, false, true);
 
     // Add entities to scene.
     // you can change the position/orientation.

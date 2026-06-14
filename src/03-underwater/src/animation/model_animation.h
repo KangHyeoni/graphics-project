@@ -12,7 +12,7 @@
 #include <assimp/scene.h>
 #include <glm/glm.hpp>
 
-#include "../model.h"
+#include "../../../00-main/src/shared/model.h"
 #include "../../../00-main/src/shared/mesh.h"
 #include "assimp_glm_helpers.h"
 #include "bone_info.h"
@@ -31,6 +31,7 @@ public:
     AnimationModel(const char* filePath, bool ignoreShadow = false, bool uvFlip = true)
     {
         this->ignoreShadow = ignoreShadow;
+        this->preserveMaterialTexturePath = true;
         loadModel(filePath, uvFlip);
         setModelSize();
     }
