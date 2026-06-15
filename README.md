@@ -1,22 +1,20 @@
-# Graphics Programming (430.638) Project
-SNU Graphics Programming course final project
+# MEGA: Magic Elements in Graphical Arts
 
+Spring 2026 SNU Graphics Programming (430.638) final project repository.
 
-## Main feature
-- 배경 skybox
-- 방 그리고 안에 소품들 적당히 잘 갖다 놓는거
-- Scene transition
-  - 다이얼 설정
-  - 방법: keyborad 할당 (직접 누를 필요는 없을듯)
-  - effect: skybox interpolation, 집과 관련된 오브젝트들과 시야까지 다 같이 회전
-- Shadow는 PSF까지만 적용하되, shadow도 다르게 적용하는 방식
-- 방 밖도 조금 자연스럽게 꾸미기
+## Team Member
 
+Sukhun Yang (@Sagit25), Kanghyeon Cho (@KangHyeoni), Taesun Kim (@alexdavid-113)
 
-## Todo list
-1. 각자 맡은 feature 구현 -> 이건 나눠서 하는 중
-2. main feature 수정
-3. feature 병합
-4. 영상 만들기
-5. 발표
-6. update README
+## Code Structure
+
+| Path | Short description |
+| --- | --- |
+| `src/00-main/` | Intro/main scene that combines loaded assets, skybox, lighting, shadows, normal mapping, and shared scene rendering logic. |
+| `src/01-fire-guide/` | Fire-guide feature scene. This is the main part implemented by **Sukhun Yang**. It contains the surface-based fire particle system, dynamic volcano scene, meteors, airplanes, dragon fire, and fire skybox. |
+| `src/02-desert-mirage/` | Team feature module for the desert/mirage scene, including desert resources and non-linear ray marching shader files. |
+| `src/03-underwater/` | Team feature module for the underwater scene, including underwater assets such as fish, caustics, boat, shells, and lighting/shadow shaders. |
+| `includes/`, `lib/`, `dlls/` | External headers, libraries, and runtime DLLs used by the OpenGL project. |
+
+## Each Member's work
+- Sukhun Yang: [Sukhun-Yang.md](Sukhun-Yang.md)
