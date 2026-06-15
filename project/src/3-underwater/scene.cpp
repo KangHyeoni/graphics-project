@@ -27,6 +27,7 @@
 #include <cstdlib>
 #include <ctime>
 #include "shared/scene_module.h"
+#include "shared/fade_foreground.h"
 
 namespace underwater {
 
@@ -37,6 +38,7 @@ void processInput(GLFWwindow* window, DirectionalLight* sun);
 void getCameraPose(SceneCameraPose* pose);
 void getDefaultCameraPose(SceneCameraPose* pose);
 void setCameraPose(const SceneCameraPose& pose);
+void renderFadeForeground(GLFWwindow* window);
 
 bool isWindowed = true;
 bool isKeyboardDone[1024] = { 0 };
@@ -44,6 +46,12 @@ bool isKeyboardDone[1024] = { 0 };
 static bool initialized = false;
 static std::function<void(GLFWwindow*)> renderFrameImpl;
 static std::function<void(GLFWwindow*)> onEnterImpl;
+static std::vector<Entity*> fadeForegroundEntities;
+static Shader* fadeForegroundShader = nullptr;
+static DepthMapTexture* fadeForegroundDepth = nullptr;
+static DirectionalLight* fadeForegroundSun = nullptr;
+static CausticTexture* fadeForegroundCaustics = nullptr;
+static int fadeForegroundCausticFrameCount = 0;
 
 // setting
 const unsigned int SCR_WIDTH = 1920;
@@ -126,6 +134,7 @@ void init(GLFWwindow* window)
     // Add entities to scene.
     // you can change the position/orientation.
     static Scene scene;
+    fadeForegroundEntities.clear();
     static std::vector<Boid*> allBoids;
     static std::vector<Boid*> sharkBoids;
     static std::vector<Boid*> bassBoids;
@@ -166,10 +175,10 @@ void init(GLFWwindow* window)
         return housePosition + glm::vec3(-local.x, local.y, -local.z);
     };
 
-    scene.addEntity(new Entity(&houseModel, housePosition, 0.0f, -90.0f + furnitureTurnY, 0.0f, 1.0f));
-    scene.addEntity(new Entity(&fireExtModel, rotateInHouse(glm::vec3(-3.5f, 0.0f, 1.5f)), 0.0f, 180.0f + furnitureTurnY, 0.0f, 0.001f));
-    scene.addEntity(new Entity(&sofaModel, rotateInHouse(glm::vec3(-2.5f, 0.1f, 0.5f)), 0.0f, furnitureTurnY, 0.0f, 0.5f));
-    scene.addEntity(new Entity(&tableModel, rotateInHouse(glm::vec3(2.5f, 0.0f, 1.0f)), 0.0f, furnitureTurnY, 0.0f, 1.2f));
+    addFadeForegroundEntity(scene, fadeForegroundEntities, new Entity(&houseModel, housePosition, 0.0f, -90.0f + furnitureTurnY, 0.0f, 1.0f));
+    addFadeForegroundEntity(scene, fadeForegroundEntities, new Entity(&fireExtModel, rotateInHouse(glm::vec3(-3.5f, 0.0f, 1.5f)), 0.0f, 180.0f + furnitureTurnY, 0.0f, 0.001f));
+    addFadeForegroundEntity(scene, fadeForegroundEntities, new Entity(&sofaModel, rotateInHouse(glm::vec3(-2.5f, 0.1f, 0.5f)), 0.0f, furnitureTurnY, 0.0f, 0.5f));
+    addFadeForegroundEntity(scene, fadeForegroundEntities, new Entity(&tableModel, rotateInHouse(glm::vec3(2.5f, 0.0f, 1.0f)), 0.0f, furnitureTurnY, 0.0f, 1.2f));
 
     scene.addEntity(new Entity(&shellModel, propTransform(glm::vec3(-7.6f, -1.05f, -24.0f), -26.0f, -8.0f, 14.0f, 0.28f)));
     scene.addEntity(new Entity(&shellModel, propTransform(glm::vec3(-6.2f, -1.04f, -25.5f), 24.0f, 6.0f, -18.0f, 0.34f)));
@@ -226,6 +235,8 @@ void init(GLFWwindow* window)
 
     // define depth texture
     static DepthMapTexture depth = DepthMapTexture(SHADOW_WIDTH, SHADOW_HEIGHT);
+    fadeForegroundShader = &lightingShader;
+    fadeForegroundDepth = &depth;
 
 
     glClearColor(0.15f, 0.52f, 0.73f, 1.0f);
@@ -243,8 +254,11 @@ void init(GLFWwindow* window)
     static const int causticFrameCount = 32;
     const char* causticFrameDirectory = "../resources/3-underwater/caustics/caustic_frames";
     static CausticTexture causticTexture(causticFrameDirectory, causticFrameCount);
+    fadeForegroundCaustics = &causticTexture;
+    fadeForegroundCausticFrameCount = causticFrameCount;
 
     static DirectionalLight sun(-90.0f, 45.0f, glm::vec3(1.0f));
+    fadeForegroundSun = &sun;
 
     static float oldTime = static_cast<float>(glfwGetTime());
     
@@ -441,9 +455,34 @@ void renderFrame(GLFWwindow* window)
     if (renderFrameImpl) renderFrameImpl(window);
 }
 
+void renderFadeForeground(GLFWwindow* window)
+{
+    (void)window;
+    if (!fadeForegroundShader || !fadeForegroundDepth || !fadeForegroundSun) {
+        return;
+    }
+
+    renderLitFadeForegroundEntities(
+        *fadeForegroundShader,
+        fadeForegroundEntities,
+        camera,
+        *fadeForegroundSun,
+        *fadeForegroundDepth,
+        framebufferWidth,
+        framebufferHeight,
+        useLighting,
+        useShadow,
+        usePCF,
+        useNormalMap,
+        fadeForegroundCaustics,
+        fadeForegroundCausticFrameCount,
+        static_cast<float>(glfwGetTime())
+    );
+}
+
 SceneModule getModule()
 {
-    return { "underwater", init, onEnter, renderFrame, framebuffer_size_callback, mouse_callback, scroll_callback, getCameraPose, getDefaultCameraPose, setCameraPose };
+    return { "underwater", init, onEnter, renderFrame, renderFadeForeground, framebuffer_size_callback, mouse_callback, scroll_callback, getCameraPose, getDefaultCameraPose, setCameraPose };
 }
 
 int runStandalone()

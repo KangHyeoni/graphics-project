@@ -17,6 +17,7 @@ struct SceneModule {
     void (*init)(GLFWwindow* window);
     void (*onEnter)(GLFWwindow* window);
     void (*renderFrame)(GLFWwindow* window);
+    void (*renderFadeForeground)(GLFWwindow* window);
     void (*onFramebufferSize)(GLFWwindow* window, int width, int height);
     void (*onMouse)(GLFWwindow* window, double xpos, double ypos);
     void (*onScroll)(GLFWwindow* window, double xoffset, double yoffset);

@@ -26,6 +26,7 @@
 #include <ctime>
 #include <cmath>
 #include "shared/scene_module.h"
+#include "shared/fade_foreground.h"
 
 
 namespace volcano {
@@ -37,6 +38,7 @@ void processInput(GLFWwindow* window, DirectionalLight* sun);
 void getCameraPose(SceneCameraPose* pose);
 void getDefaultCameraPose(SceneCameraPose* pose);
 void setCameraPose(const SceneCameraPose& pose);
+void renderFadeForeground(GLFWwindow* window);
 
 bool isWindowed = true;
 bool isKeyboardDone[1024] = { 0 };
@@ -44,6 +46,10 @@ bool isKeyboardDone[1024] = { 0 };
 static bool initialized = false;
 static std::function<void(GLFWwindow*)> renderFrameImpl;
 static std::function<void(GLFWwindow*)> onEnterImpl;
+static std::vector<Entity*> fadeForegroundEntities;
+static Shader* fadeForegroundShader = nullptr;
+static DepthMapTexture* fadeForegroundDepth = nullptr;
+static DirectionalLight* fadeForegroundSun = nullptr;
 
 // setting
 const unsigned int SCR_WIDTH = 1920;
@@ -359,6 +365,7 @@ void init(GLFWwindow* window)
 
     // Add entities to scene.
     static Scene scene;
+    fadeForegroundEntities.clear();
 
     const glm::vec3 housePosition = glm::vec3(0.0f, 0.0f, 0.0f);
     const float furnitureTurnY = 180.0f;
@@ -367,10 +374,10 @@ void init(GLFWwindow* window)
         return housePosition + glm::vec3(-local.x, local.y, -local.z);
     };
 
-    scene.addEntity(new Entity(&houseModel, housePosition, 0.0f, -90.0f + furnitureTurnY, 0.0f, 1.0f));
-    scene.addEntity(new Entity(&fireExtModel, rotateInHouse(glm::vec3(-3.5f, 0.0f, 1.5f)), 0.0f, 180.0f + furnitureTurnY, 0.0f, 0.001f));
-    scene.addEntity(new Entity(&sofaModel, rotateInHouse(glm::vec3(-2.5f, 0.1f, 0.5f)), 0.0f, furnitureTurnY, 0.0f, 0.5f));
-    scene.addEntity(new Entity(&tableModel, rotateInHouse(glm::vec3(2.5f, 0.0f, 1.0f)), 0.0f, furnitureTurnY, 0.0f, 1.2f));
+    addFadeForegroundEntity(scene, fadeForegroundEntities, new Entity(&houseModel, housePosition, 0.0f, -90.0f + furnitureTurnY, 0.0f, 1.0f));
+    addFadeForegroundEntity(scene, fadeForegroundEntities, new Entity(&fireExtModel, rotateInHouse(glm::vec3(-3.5f, 0.0f, 1.5f)), 0.0f, 180.0f + furnitureTurnY, 0.0f, 0.001f));
+    addFadeForegroundEntity(scene, fadeForegroundEntities, new Entity(&sofaModel, rotateInHouse(glm::vec3(-2.5f, 0.1f, 0.5f)), 0.0f, furnitureTurnY, 0.0f, 0.5f));
+    addFadeForegroundEntity(scene, fadeForegroundEntities, new Entity(&tableModel, rotateInHouse(glm::vec3(2.5f, 0.0f, 1.0f)), 0.0f, furnitureTurnY, 0.0f, 1.2f));
 
     static Entity* toothlessEntity = new Entity(&toothlessModel, glm::vec3(1.0f, -3.0f, 1.0f) + fireSceneOffset, -90.0f, 180.0f, 0.0f, 0.05f);
     scene.addEntity(toothlessEntity);
@@ -414,6 +421,8 @@ void init(GLFWwindow* window)
 
     // define depth texture
     static DepthMapTexture depth = DepthMapTexture(SHADOW_WIDTH, SHADOW_HEIGHT);
+    fadeForegroundShader = &lightingShader;
+    fadeForegroundDepth = &depth;
 
     // skybox (fire)
     std::vector<std::string> faces {
@@ -439,6 +448,7 @@ void init(GLFWwindow* window)
     skyboxShader.setInt("skyboxTexture1", 0);
 
     static DirectionalLight sun(-90.0f, 45.0f, glm::vec3(1.0f));
+    fadeForegroundSun = &sun;
 
     static float oldTime = static_cast<float>(glfwGetTime());
     static float flightTime = 0.0f;
@@ -711,9 +721,31 @@ void renderFrame(GLFWwindow* window)
     if (renderFrameImpl) renderFrameImpl(window);
 }
 
+void renderFadeForeground(GLFWwindow* window)
+{
+    (void)window;
+    if (!fadeForegroundShader || !fadeForegroundDepth || !fadeForegroundSun) {
+        return;
+    }
+
+    renderLitFadeForegroundEntities(
+        *fadeForegroundShader,
+        fadeForegroundEntities,
+        camera,
+        *fadeForegroundSun,
+        *fadeForegroundDepth,
+        framebufferWidth,
+        framebufferHeight,
+        useLighting,
+        useShadow,
+        usePCF,
+        useNormalMap
+    );
+}
+
 SceneModule getModule()
 {
-    return { "volcano", init, onEnter, renderFrame, framebuffer_size_callback, mouse_callback, scroll_callback, getCameraPose, getDefaultCameraPose, setCameraPose };
+    return { "volcano", init, onEnter, renderFrame, renderFadeForeground, framebuffer_size_callback, mouse_callback, scroll_callback, getCameraPose, getDefaultCameraPose, setCameraPose };
 }
 
 int runStandalone()

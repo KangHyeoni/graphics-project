@@ -1,10 +1,12 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include <algorithm>
 #include <iostream>
 #include <vector>
 
 #include "shared/scene_module.h"
+#include "shared/shader.h"
 
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
@@ -16,6 +18,21 @@ namespace underwater { SceneModule getModule(); }
 
 static std::vector<SceneModule> scenes;
 static int activeSceneIndex = 0;
+static Shader fadeOverlayShader;
+static unsigned int fadeOverlayVAO = 0;
+static unsigned int fadeOverlayVBO = 0;
+
+enum class SceneTransitionPhase {
+    None,
+    FadeOut,
+    FadeIn,
+};
+
+static const float SCENE_FADE_OUT_SECONDS = 1.0f;
+static const float SCENE_FADE_IN_SECONDS = 1.0f;
+static SceneTransitionPhase sceneTransitionPhase = SceneTransitionPhase::None;
+static float sceneTransitionPhaseStart = 0.0f;
+static int pendingSceneIndex = -1;
 
 static SceneModule& activeScene()
 {
@@ -43,9 +60,62 @@ static void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     }
 }
 
-static void switchToNextScene(GLFWwindow* window)
+static void initFadeOverlay()
+{
+    fadeOverlayShader = Shader("../shaders/shared/fade_overlay.vs", "../shaders/shared/fade_overlay.fs");
+
+    const float quadVertices[] = {
+        -1.0f,  1.0f,
+        -1.0f, -1.0f,
+         1.0f, -1.0f,
+        -1.0f,  1.0f,
+         1.0f, -1.0f,
+         1.0f,  1.0f,
+    };
+
+    glGenVertexArrays(1, &fadeOverlayVAO);
+    glGenBuffers(1, &fadeOverlayVBO);
+    glBindVertexArray(fadeOverlayVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, fadeOverlayVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+}
+
+static void drawFadeOverlay(float alpha)
+{
+    alpha = std::max(0.0f, std::min(alpha, 1.0f));
+    if (alpha <= 0.0f || fadeOverlayVAO == 0) {
+        return;
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_BLEND);
+    glBlendEquation(GL_FUNC_ADD);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    fadeOverlayShader.use();
+    fadeOverlayShader.setFloat("alpha", alpha);
+    glBindVertexArray(fadeOverlayVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
+
+    glDisable(GL_BLEND);
+    glDepthMask(GL_TRUE);
+    glEnable(GL_DEPTH_TEST);
+}
+
+static void switchToScene(GLFWwindow* window, int targetSceneIndex)
 {
     if (scenes.empty()) {
+        return;
+    }
+    if (targetSceneIndex < 0 || targetSceneIndex >= static_cast<int>(scenes.size())) {
         return;
     }
 
@@ -63,7 +133,7 @@ static void switchToNextScene(GLFWwindow* window)
         hasSourceDefaultPose = true;
     }
 
-    activeSceneIndex = (activeSceneIndex + 1) % static_cast<int>(scenes.size());
+    activeSceneIndex = targetSceneIndex;
     if (activeScene().onEnter) {
         activeScene().onEnter(window);
     }
@@ -84,6 +154,62 @@ static void switchToNextScene(GLFWwindow* window)
     std::cout << "Active scene: " << activeScene().name << std::endl;
 }
 
+static bool isSceneTransitionActive()
+{
+    return sceneTransitionPhase != SceneTransitionPhase::None;
+}
+
+static void requestNextSceneTransition()
+{
+    if (scenes.empty() || isSceneTransitionActive()) {
+        return;
+    }
+
+    pendingSceneIndex = (activeSceneIndex + 1) % static_cast<int>(scenes.size());
+    sceneTransitionPhase = SceneTransitionPhase::FadeOut;
+    sceneTransitionPhaseStart = static_cast<float>(glfwGetTime());
+}
+
+static void updateSceneTransition(GLFWwindow* window)
+{
+    if (!isSceneTransitionActive()) {
+        return;
+    }
+
+    float now = static_cast<float>(glfwGetTime());
+    float elapsed = now - sceneTransitionPhaseStart;
+
+    if (sceneTransitionPhase == SceneTransitionPhase::FadeOut && elapsed >= SCENE_FADE_OUT_SECONDS) {
+        switchToScene(window, pendingSceneIndex);
+        sceneTransitionPhase = SceneTransitionPhase::FadeIn;
+        sceneTransitionPhaseStart = now;
+        return;
+    }
+
+    if (sceneTransitionPhase == SceneTransitionPhase::FadeIn && elapsed >= SCENE_FADE_IN_SECONDS) {
+        sceneTransitionPhase = SceneTransitionPhase::None;
+        pendingSceneIndex = -1;
+    }
+}
+
+static float getSceneTransitionFadeAlpha()
+{
+    if (!isSceneTransitionActive()) {
+        return 0.0f;
+    }
+
+    float now = static_cast<float>(glfwGetTime());
+    float elapsed = now - sceneTransitionPhaseStart;
+
+    if (sceneTransitionPhase == SceneTransitionPhase::FadeOut) {
+        return std::min(elapsed / SCENE_FADE_OUT_SECONDS, 1.0f);
+    }
+    if (sceneTransitionPhase == SceneTransitionPhase::FadeIn) {
+        return 1.0f - std::min(elapsed / SCENE_FADE_IN_SECONDS, 1.0f);
+    }
+    return 0.0f;
+}
+
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     (void)scancode;
@@ -93,7 +219,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
         glfwSetWindowShouldClose(window, true);
     }
     if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
-        switchToNextScene(window);
+        requestNextSceneTransition();
     }
 }
 
@@ -125,6 +251,7 @@ int main()
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
+    initFadeOverlay();
 
     scenes = {
         base::getModule(),
@@ -146,8 +273,14 @@ int main()
     std::cout << "Active scene: " << activeScene().name << std::endl;
 
     while (!glfwWindowShouldClose(window)) {
+        updateSceneTransition(window);
         if (activeScene().renderFrame) {
             activeScene().renderFrame(window);
+        }
+        float fadeAlpha = getSceneTransitionFadeAlpha();
+        drawFadeOverlay(fadeAlpha);
+        if (fadeAlpha > 0.0f && activeScene().renderFadeForeground) {
+            activeScene().renderFadeForeground(window);
         }
         glfwSwapBuffers(window);
         glfwPollEvents();

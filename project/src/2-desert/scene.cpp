@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <cmath>
 #include "shared/scene_module.h"
+#include "shared/fade_foreground.h"
 
 namespace desert {
 
@@ -33,6 +34,7 @@ void resizeSceneTarget(int width, int height);
 void getCameraPose(SceneCameraPose* pose);
 void getDefaultCameraPose(SceneCameraPose* pose);
 void setCameraPose(const SceneCameraPose& pose);
+void renderFadeForeground(GLFWwindow* window);
 float getGroundTempAtTime(float renderTime);
 float getTemperatureRenderTime(float elapsedTime);
 float getHazeAmountAtTime(float renderTime, float currentGroundTemp);
@@ -45,6 +47,11 @@ bool isKeyboardDone[1024] = { 0 };
 static bool initialized = false;
 static std::function<void(GLFWwindow*)> renderFrameImpl;
 static std::function<void(GLFWwindow*)> onEnterImpl;
+static Shader* fadeForegroundShader = nullptr;
+static DepthMapTexture* fadeForegroundDepth = nullptr;
+static std::vector<Entity*>* fadeForegroundEntities = nullptr;
+static glm::vec3 fadeForegroundHousePosition = glm::vec3(0.0f);
+static glm::vec3 fadeForegroundLightDir = glm::vec3(0.0f, -1.0f, 0.0f);
 
 // setting
 const unsigned int SCR_WIDTH = 1920;
@@ -245,6 +252,8 @@ void init(GLFWwindow* window)
     static Model tableModel("../resources/0-base/table/Center Table.obj");
 
     static std::vector<Entity*> houseEntities;
+    houseEntities.clear();
+    fadeForegroundEntities = &houseEntities;
     const glm::vec3 mainCameraStart = glm::vec3(0.0f, 1.5f, 0.5f);
     const glm::vec3 mainSceneOffset = glm::vec3(-2.0f, 0.0f, 4.0f);
     const glm::vec3 mainHousePosition = glm::vec3(2.0f, 0.0f, -4.0f) + mainSceneOffset;
@@ -257,6 +266,7 @@ void init(GLFWwindow* window)
         glm::vec3 local = position - housePosition;
         return housePosition + glm::vec3(-local.x, local.y, -local.z);
     };
+    fadeForegroundHousePosition = housePosition;
 
     houseEntities.push_back(new Entity(&houseModel, housePosition, 0.0f, 90.0f, 0.0f, 1.0f));
     houseEntities.push_back(new Entity(&fireExtModel, rotateInHouse(mapMainPosition(glm::vec3(-1.5f, 0.0f, -2.5f) + mainSceneOffset)), 0.0f, 180.0f + furnitureTurnY, 0.0f, 0.001f));
@@ -264,6 +274,8 @@ void init(GLFWwindow* window)
     houseEntities.push_back(new Entity(&tableModel, rotateInHouse(mapMainPosition(glm::vec3(4.5f, 0.0f, -3.0f) + mainSceneOffset)), 0.0f, furnitureTurnY, 0.0f, 1.2f));
 
     static DepthMapTexture depth = DepthMapTexture(SHADOW_WIDTH, SHADOW_HEIGHT);
+    fadeForegroundShader = &lightingShader;
+    fadeForegroundDepth = &depth;
 
     unsigned int vs_ubo = glGetUniformBlockIndex(rayTracingShader.ID, "mesh_vertices_ubo");
     glUniformBlockBinding(rayTracingShader.ID, vs_ubo, 0);
@@ -299,6 +311,7 @@ void init(GLFWwindow* window)
     lightingShader.setInt("depthMapSampler", 3);
     lightingShader.setFloat("material.shininess", 32.0f);
     static glm::vec3 houseLightDir = getDirectionalLightDir(-90.0f, 45.0f);
+    fadeForegroundLightDir = houseLightDir;
     lightingShader.setVec3("light.dir", houseLightDir);
     lightingShader.setVec3("light.color", glm::vec3(1.0f));
     lightingShader.setFloat("useShadow", 1.0f);
@@ -438,9 +451,53 @@ void renderFrame(GLFWwindow* window)
     if (renderFrameImpl) renderFrameImpl(window);
 }
 
+void renderFadeForeground(GLFWwindow* window)
+{
+    (void)window;
+    if (!fadeForegroundShader || !fadeForegroundDepth || !fadeForegroundEntities) {
+        return;
+    }
+    if (framebufferWidth <= 0 || framebufferHeight <= 0) {
+        return;
+    }
+
+    beginFadeForegroundRender(framebufferWidth, framebufferHeight);
+
+    glm::mat4 lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 0.1f, 80.0f);
+    glm::mat4 lightView = glm::lookAt(
+        fadeForegroundHousePosition - fadeForegroundLightDir * 30.0f,
+        fadeForegroundHousePosition,
+        glm::vec3(0.0f, 1.0f, 0.0f)
+    );
+    glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+    glm::mat4 projection = glm::perspective(
+        glm::radians(camera.Zoom),
+        static_cast<float>(framebufferWidth) / static_cast<float>(framebufferHeight),
+        0.1f,
+        100.0f
+    );
+    glm::mat4 view = camera.GetViewMatrix();
+
+    fadeForegroundShader->use();
+    fadeForegroundShader->setFloat("useLighting", 1.0f);
+    fadeForegroundShader->setFloat("useShadow", 1.0f);
+    fadeForegroundShader->setFloat("usePCF", 1.0f);
+    fadeForegroundShader->setVec3("light.dir", fadeForegroundLightDir);
+    fadeForegroundShader->setVec3("light.color", glm::vec3(1.0f));
+    fadeForegroundShader->setVec3("viewPos", camera.Position);
+    fadeForegroundShader->setMat4("projection", projection);
+    fadeForegroundShader->setMat4("view", view);
+    fadeForegroundShader->setMat4("lightSpaceMatrix", lightSpaceMatrix);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, fadeForegroundDepth->ID);
+
+    drawModelEntities(*fadeForegroundShader, *fadeForegroundEntities);
+    endFadeForegroundRender();
+}
+
 SceneModule getModule()
 {
-    return { "desert", init, onEnter, renderFrame, framebuffer_size_callback, mouse_callback, scroll_callback, getCameraPose, getDefaultCameraPose, setCameraPose };
+    return { "desert", init, onEnter, renderFrame, renderFadeForeground, framebuffer_size_callback, mouse_callback, scroll_callback, getCameraPose, getDefaultCameraPose, setCameraPose };
 }
 
 int runStandalone()
