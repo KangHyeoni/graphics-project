@@ -22,7 +22,7 @@
 #include "shared/light.h"
 #include "shared/scene_module.h"
 
-namespace Scene0 {
+namespace base {
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -85,35 +85,35 @@ void init(GLFWwindow* window)
 
 
     // define models
-    static Model brickCubeModel("../../00-main/resources/0-main/brickcube/brickcube.obj");
-    brickCubeModel.setDiffuse("../../00-main/resources/0-main/brickcube/brickcube_d.png");
-    brickCubeModel.setSpecular("../../00-main/resources/0-main/brickcube/brickcube_s.png");
-    brickCubeModel.setNormal("../../00-main/resources/0-main/brickcube/brickcube_n.png");
+    static Model brickCubeModel("../../00-main/resources/0-base/brickcube/brickcube.obj");
+    brickCubeModel.setDiffuse("../../00-main/resources/0-base/brickcube/brickcube_d.png");
+    brickCubeModel.setSpecular("../../00-main/resources/0-base/brickcube/brickcube_s.png");
+    brickCubeModel.setNormal("../../00-main/resources/0-base/brickcube/brickcube_n.png");
 
-    static Model boulderModel("../../00-main/resources/0-main/boulder/boulder.obj");
-    boulderModel.setDiffuse("../../00-main/resources/0-main/boulder/boulder_d.png");
-    boulderModel.setNormal("../../00-main/resources/0-main/boulder/boulder_n.png");
+    static Model boulderModel("../../00-main/resources/0-base/boulder/boulder.obj");
+    boulderModel.setDiffuse("../../00-main/resources/0-base/boulder/boulder_d.png");
+    boulderModel.setNormal("../../00-main/resources/0-base/boulder/boulder_n.png");
 
-    static Model grassGroundModel = Model("../../00-main/resources/0-main/plane.obj", true);
-    grassGroundModel.setDiffuse("../../00-main/resources/0-main/grass_ground.jpg");
+    static Model grassGroundModel = Model("../../00-main/resources/0-base/plane.obj", true);
+    grassGroundModel.setDiffuse("../../00-main/resources/0-base/grass_ground.jpg");
 
-    static Model barrelModel = Model("../../00-main/resources/0-main/barrel/barrel.obj");
-    barrelModel.setDiffuse("../../00-main/resources/0-main/barrel/barrel_d.png");
-    barrelModel.setSpecular("../../00-main/resources/0-main/barrel/barrel_s.png");
-    barrelModel.setNormal("../../00-main/resources/0-main/barrel/barrel_n.png");
+    static Model barrelModel = Model("../../00-main/resources/0-base/barrel/barrel.obj");
+    barrelModel.setDiffuse("../../00-main/resources/0-base/barrel/barrel_d.png");
+    barrelModel.setSpecular("../../00-main/resources/0-base/barrel/barrel_s.png");
+    barrelModel.setNormal("../../00-main/resources/0-base/barrel/barrel_n.png");
 
-    static Model fireExtModel = Model("../../00-main/resources/0-main/FireExt/FireExt.obj");
-    fireExtModel.setDiffuse("../../00-main/resources/0-main/FireExt/FireExt_d.jpg");
-    fireExtModel.setSpecular("../../00-main/resources/0-main/FireExt/FireExt_s.jpg");
-    fireExtModel.setNormal("../../00-main/resources/0-main/FireExt/FireExt_n.jpg");
+    static Model fireExtModel = Model("../../00-main/resources/0-base/FireExt/FireExt.obj");
+    fireExtModel.setDiffuse("../../00-main/resources/0-base/FireExt/FireExt_d.jpg");
+    fireExtModel.setSpecular("../../00-main/resources/0-base/FireExt/FireExt_s.jpg");
+    fireExtModel.setNormal("../../00-main/resources/0-base/FireExt/FireExt_n.jpg");
 
-    static Model catModel = Model("../../00-main/resources/0-main/cat/12221_Cat_v1_l3.obj");
-    catModel.setDiffuse("../../00-main/resources/0-main/cat/Cat_diffuse.jpg");
+    static Model catModel = Model("../../00-main/resources/0-base/cat/12221_Cat_v1_l3.obj");
+    catModel.setDiffuse("../../00-main/resources/0-base/cat/Cat_diffuse.jpg");
 
-    static Model roomModel = Model("../../00-main/resources/0-main/room/small_house_obj.obj");
-    static Model houseModel = Model("../../00-main/resources/0-main/room/Warehouse.obj");
-    static Model sofaModel = Model("../../00-main/resources/0-main/sofa/sofa.obj");
-    static Model tableModel = Model("../../00-main/resources/0-main/table/Center Table.obj");
+    static Model roomModel = Model("../../00-main/resources/0-base/room/small_house_obj.obj");
+    static Model houseModel = Model("../../00-main/resources/0-base/room/Warehouse.obj");
+    static Model sofaModel = Model("../../00-main/resources/0-base/sofa/sofa.obj");
+    static Model tableModel = Model("../../00-main/resources/0-base/table/Center Table.obj");
 
 
 
@@ -153,12 +153,12 @@ void init(GLFWwindow* window)
     // skybox
     std::vector<std::string> faces
     {
-        "../../00-main/resources/0-main/skybox/right.jpg",
-        "../../00-main/resources/0-main/skybox/left.jpg",
-        "../../00-main/resources/0-main/skybox/top.jpg",
-        "../../00-main/resources/0-main/skybox/bottom.jpg",
-        "../../00-main/resources/0-main/skybox/front.jpg",
-        "../../00-main/resources/0-main/skybox/back.jpg"
+        "../../00-main/resources/0-base/skybox/right.jpg",
+        "../../00-main/resources/0-base/skybox/left.jpg",
+        "../../00-main/resources/0-base/skybox/top.jpg",
+        "../../00-main/resources/0-base/skybox/bottom.jpg",
+        "../../00-main/resources/0-base/skybox/front.jpg",
+        "../../00-main/resources/0-base/skybox/back.jpg"
     };
     static CubemapTexture skyboxTexture = CubemapTexture(faces);
     static unsigned int VAOskybox = 0, VBOskybox = 0;
@@ -354,7 +354,7 @@ void renderFrame(GLFWwindow* window)
 
 SceneModule getModule()
 {
-    return { "Scene0", init, onEnter, renderFrame, framebuffer_size_callback, mouse_callback, scroll_callback, getCameraPose, getDefaultCameraPose, setCameraPose };
+    return { "base", init, onEnter, renderFrame, framebuffer_size_callback, mouse_callback, scroll_callback, getCameraPose, getDefaultCameraPose, setCameraPose };
 }
 
 int runStandalone()
@@ -533,11 +533,11 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     camera.ProcessMouseScroll(yoffset);
 }
 
-} // namespace Scene0
+} // namespace base
 
 #ifndef COMBINED_SCENE_APP
 int main()
 {
-    return Scene0::runStandalone();
+    return base::runStandalone();
 }
 #endif

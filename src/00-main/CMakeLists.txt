@@ -13,9 +13,10 @@ file(GLOB SOURCE
 set(SOURCE ${SOURCE} ../glad.c)
 list(APPEND SOURCE
     src/shared/stb_image_impl.cpp
-    ../01-fire-guide/src/scene1.cpp
-    ../02-desert-mirage/src/scene2.cpp
-    ../03-underwater/src/scene3.cpp
+    src/0-base/scene.cpp
+    src/1-volcano/scene.cpp
+    src/2-desert/scene.cpp
+    src/3-underwater/scene.cpp
 )
 set(NAME "main")
 
@@ -54,4 +55,5 @@ list(APPEND CMAKE_CXX_FLAGS "-std=c++11")
 add_executable(${NAME} ${SOURCE})
 target_compile_definitions(${NAME} PRIVATE COMBINED_SCENE_APP GRAPHICS_PROJECT_NO_STB_IMAGE_IMPLEMENTATION)
 target_link_libraries(${NAME} ${LIBS})
+include_directories(src)
 include_directories(${PROJECT_ORIGIN}/includes)

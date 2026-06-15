@@ -6,19 +6,19 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "../../00-main/src/shared/shader.h"
-#include "../../00-main/src/shared/opengl_utils.h"
+#include "shared/shader.h"
+#include "shared/opengl_utils.h"
 #include <algorithm>
 #include <iostream>
 #include <vector>
 #include <functional>
-#include "../../00-main/src/shared/camera.h"
-#include "../../00-main/src/shared/texture.h"
-#include "../../00-main/src/shared/model.h"
-#include "../../00-main/src/shared/mesh.h"
-#include "../../00-main/src/shared/scene.h"
-#include "../../00-main/src/shared/math_utils.h"
-#include "../../00-main/src/shared/light.h"
+#include "shared/camera.h"
+#include "shared/texture.h"
+#include "shared/model.h"
+#include "shared/mesh.h"
+#include "shared/scene.h"
+#include "shared/math_utils.h"
+#include "shared/light.h"
 #include "animation/model_animation.h"
 #include "animation/animation.h"
 #include "animation/animator.h"
@@ -26,9 +26,9 @@
 #include "animation/boid.h"
 #include <cstdlib>
 #include <ctime>
-#include "../../00-main/src/shared/scene_module.h"
+#include "shared/scene_module.h"
 
-namespace Scene3 {
+namespace underwater {
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -115,13 +115,13 @@ void init(GLFWwindow* window)
     static Model boatModel = Model("../../00-main/resources/3-underwater/wooden_boat/wooden_boat.obj", false, true, true);
 
     static Model floorModel = Model("../../00-main/resources/3-underwater/mountain/mountain.obj", true, true, true);
-    static Model fireExtModel = Model("../../00-main/resources/0-main/FireExt/FireExt.obj");
-    fireExtModel.setDiffuse("../../00-main/resources/0-main/FireExt/FireExt_d.jpg");
-    fireExtModel.setSpecular("../../00-main/resources/0-main/FireExt/FireExt_s.jpg");
-    fireExtModel.setNormal("../../00-main/resources/0-main/FireExt/FireExt_n.jpg");
-    static Model houseModel = Model("../../00-main/resources/0-main/room/Warehouse.obj");
-    static Model sofaModel = Model("../../00-main/resources/0-main/sofa/sofa.obj");
-    static Model tableModel = Model("../../00-main/resources/0-main/table/Center Table.obj");
+    static Model fireExtModel = Model("../../00-main/resources/0-base/FireExt/FireExt.obj");
+    fireExtModel.setDiffuse("../../00-main/resources/0-base/FireExt/FireExt_d.jpg");
+    fireExtModel.setSpecular("../../00-main/resources/0-base/FireExt/FireExt_s.jpg");
+    fireExtModel.setNormal("../../00-main/resources/0-base/FireExt/FireExt_n.jpg");
+    static Model houseModel = Model("../../00-main/resources/0-base/room/Warehouse.obj");
+    static Model sofaModel = Model("../../00-main/resources/0-base/sofa/sofa.obj");
+    static Model tableModel = Model("../../00-main/resources/0-base/table/Center Table.obj");
 
     // Add entities to scene.
     // you can change the position/orientation.
@@ -443,7 +443,7 @@ void renderFrame(GLFWwindow* window)
 
 SceneModule getModule()
 {
-    return { "Scene3", init, onEnter, renderFrame, framebuffer_size_callback, mouse_callback, scroll_callback, getCameraPose, getDefaultCameraPose, setCameraPose };
+    return { "underwater", init, onEnter, renderFrame, framebuffer_size_callback, mouse_callback, scroll_callback, getCameraPose, getDefaultCameraPose, setCameraPose };
 }
 
 int runStandalone()
@@ -623,11 +623,11 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     camera.ProcessMouseScroll(yoffset);
 }
 
-} // namespace Scene3
+} // namespace underwater
 
 #ifndef COMBINED_SCENE_APP
 int main()
 {
-    return Scene3::runStandalone();
+    return underwater::runStandalone();
 }
 #endif

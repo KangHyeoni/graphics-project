@@ -12,8 +12,8 @@
 #include <assimp/scene.h>
 #include <glm/glm.hpp>
 
-#include "../../../00-main/src/shared/model.h"
-#include "../../../00-main/src/shared/mesh.h"
+#include "shared/model.h"
+#include "shared/mesh.h"
 #include "assimp_glm_helpers.h"
 #include "bone_info.h"
 

@@ -8,9 +8,9 @@
 #include <vector>
 #include <cstdlib>
 
-#include "../../00-main/src/shared/shader.h"
-#include "../../00-main/src/shared/camera.h"
-#include "../../00-main/src/shared/model.h"
+#include "shared/shader.h"
+#include "shared/camera.h"
+#include "shared/model.h"
 
 // Particle structure
 struct Particle {

@@ -6,29 +6,29 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "../../00-main/src/shared/shader.h"
-#include "../../00-main/src/shared/opengl_utils.h"
-#include "../../00-main/src/shared/geometry_primitives.h"
+#include "shared/shader.h"
+#include "shared/opengl_utils.h"
+#include "shared/geometry_primitives.h"
 #include <iostream>
 #include <vector>
 #include <functional>
-#include "../../00-main/src/shared/camera.h"
-#include "../../00-main/src/shared/texture.h"
-#include "../../00-main/src/shared/texture_cube.h"
-#include "../../00-main/src/shared/model.h"
-#include "../../00-main/src/shared/mesh.h"
-#include "../../00-main/src/shared/scene.h"
-#include "../../00-main/src/shared/math_utils.h"
-#include "../../00-main/src/shared/light.h"
+#include "shared/camera.h"
+#include "shared/texture.h"
+#include "shared/texture_cube.h"
+#include "shared/model.h"
+#include "shared/mesh.h"
+#include "shared/scene.h"
+#include "shared/math_utils.h"
+#include "shared/light.h"
 #include "particle_system.h"
 #include <algorithm>
 #include <cstdlib>
 #include <ctime>
 #include <cmath>
-#include "../../00-main/src/shared/scene_module.h"
+#include "shared/scene_module.h"
 
 
-namespace Scene1 {
+namespace volcano {
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -349,13 +349,13 @@ void init(GLFWwindow* window)
     static Model dragonModel("../../00-main/resources/1-volcano/dragon/dragon.obj");
     dragonModel.setDiffuse("../../00-main/resources/1-volcano/dragon/textures/Dragon_Bump_Col2.jpg");
     dragonModel.setNormal("../../00-main/resources/1-volcano/dragon/textures/Dragon_Nor.jpg");
-    static Model fireExtModel = Model("../../00-main/resources/0-main/FireExt/FireExt.obj");
-    fireExtModel.setDiffuse("../../00-main/resources/0-main/FireExt/FireExt_d.jpg");
-    fireExtModel.setSpecular("../../00-main/resources/0-main/FireExt/FireExt_s.jpg");
-    fireExtModel.setNormal("../../00-main/resources/0-main/FireExt/FireExt_n.jpg");
-    static Model houseModel = Model("../../00-main/resources/0-main/room/Warehouse.obj");
-    static Model sofaModel = Model("../../00-main/resources/0-main/sofa/sofa.obj");
-    static Model tableModel = Model("../../00-main/resources/0-main/table/Center Table.obj");
+    static Model fireExtModel = Model("../../00-main/resources/0-base/FireExt/FireExt.obj");
+    fireExtModel.setDiffuse("../../00-main/resources/0-base/FireExt/FireExt_d.jpg");
+    fireExtModel.setSpecular("../../00-main/resources/0-base/FireExt/FireExt_s.jpg");
+    fireExtModel.setNormal("../../00-main/resources/0-base/FireExt/FireExt_n.jpg");
+    static Model houseModel = Model("../../00-main/resources/0-base/room/Warehouse.obj");
+    static Model sofaModel = Model("../../00-main/resources/0-base/sofa/sofa.obj");
+    static Model tableModel = Model("../../00-main/resources/0-base/table/Center Table.obj");
 
     // Add entities to scene.
     static Scene scene;
@@ -713,7 +713,7 @@ void renderFrame(GLFWwindow* window)
 
 SceneModule getModule()
 {
-    return { "Scene1", init, onEnter, renderFrame, framebuffer_size_callback, mouse_callback, scroll_callback, getCameraPose, getDefaultCameraPose, setCameraPose };
+    return { "volcano", init, onEnter, renderFrame, framebuffer_size_callback, mouse_callback, scroll_callback, getCameraPose, getDefaultCameraPose, setCameraPose };
 }
 
 int runStandalone()
@@ -914,11 +914,11 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
     camera.ProcessMouseScroll(yoffset);
 }
 
-} // namespace Scene1
+} // namespace volcano
 
 #ifndef COMBINED_SCENE_APP
 int main()
 {
-    return Scene1::runStandalone();
+    return volcano::runStandalone();
 }
 #endif

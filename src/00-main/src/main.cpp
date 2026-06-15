@@ -9,10 +9,10 @@
 const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
 
-namespace Scene0 { SceneModule getModule(); }
-namespace Scene1 { SceneModule getModule(); }
-namespace Scene2 { SceneModule getModule(); }
-namespace Scene3 { SceneModule getModule(); }
+namespace base { SceneModule getModule(); }
+namespace volcano { SceneModule getModule(); }
+namespace desert { SceneModule getModule(); }
+namespace underwater { SceneModule getModule(); }
 
 static std::vector<SceneModule> scenes;
 static int activeSceneIndex = 0;
@@ -127,10 +127,10 @@ int main()
     }
 
     scenes = {
-        Scene0::getModule(),
-        Scene1::getModule(),
-        Scene2::getModule(),
-        Scene3::getModule(),
+        base::getModule(),
+        volcano::getModule(),
+        desert::getModule(),
+        underwater::getModule(),
     };
 
     for (SceneModule& scene : scenes) {

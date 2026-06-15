@@ -11,6 +11,7 @@ file(GLOB SOURCE
 )
 
 set(SOURCE ${SOURCE} ../glad.c)
+list(APPEND SOURCE ../00-main/src/1-volcano/scene.cpp)
 set(NAME "main")
 
 link_directories(${PROJECT_ORIGIN}/lib)
@@ -47,4 +48,5 @@ endif(UNIX)
 list(APPEND CMAKE_CXX_FLAGS "-std=c++11")
 add_executable(${NAME} ${SOURCE})
 target_link_libraries(${NAME} ${LIBS})
+include_directories(../00-main/src)
 include_directories(${PROJECT_ORIGIN}/includes)

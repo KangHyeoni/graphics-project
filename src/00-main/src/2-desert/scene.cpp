@@ -6,21 +6,21 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "../../00-main/src/shared/shader.h"
-#include "../../00-main/src/shared/opengl_utils.h"
+#include "shared/shader.h"
+#include "shared/opengl_utils.h"
 #include <iostream>
 #include <vector>
 #include <functional>
-#include "../../00-main/src/shared/camera.h"
-#include "../../00-main/src/shared/texture.h"
-#include "../../00-main/src/shared/texture_cube.h"
-#include "../../00-main/src/shared/model.h"
-#include "../../00-main/src/shared/mesh.h"
+#include "shared/camera.h"
+#include "shared/texture.h"
+#include "shared/texture_cube.h"
+#include "shared/model.h"
+#include "shared/mesh.h"
 #include <algorithm>
 #include <cmath>
-#include "../../00-main/src/shared/scene_module.h"
+#include "shared/scene_module.h"
 
-namespace Scene2 {
+namespace desert {
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -236,13 +236,13 @@ void init(GLFWwindow* window)
     static Texture objectTex("../../00-main/resources/2-desert/pyramid/sandstone_diff.jpg");
     static Texture groundTex("../../00-main/resources/2-desert/pyramid/desert_sand_floor.jpg");
 
-    static Model houseModel("../../00-main/resources/0-main/room/Warehouse.obj");
-    static Model fireExtModel("../../00-main/resources/0-main/FireExt/FireExt.obj");
-    fireExtModel.setDiffuse("../../00-main/resources/0-main/FireExt/FireExt_d.jpg");
-    fireExtModel.setSpecular("../../00-main/resources/0-main/FireExt/FireExt_s.jpg");
-    fireExtModel.setNormal("../../00-main/resources/0-main/FireExt/FireExt_n.jpg");
-    static Model sofaModel("../../00-main/resources/0-main/sofa/sofa.obj");
-    static Model tableModel("../../00-main/resources/0-main/table/Center Table.obj");
+    static Model houseModel("../../00-main/resources/0-base/room/Warehouse.obj");
+    static Model fireExtModel("../../00-main/resources/0-base/FireExt/FireExt.obj");
+    fireExtModel.setDiffuse("../../00-main/resources/0-base/FireExt/FireExt_d.jpg");
+    fireExtModel.setSpecular("../../00-main/resources/0-base/FireExt/FireExt_s.jpg");
+    fireExtModel.setNormal("../../00-main/resources/0-base/FireExt/FireExt_n.jpg");
+    static Model sofaModel("../../00-main/resources/0-base/sofa/sofa.obj");
+    static Model tableModel("../../00-main/resources/0-base/table/Center Table.obj");
 
     static std::vector<Entity*> houseEntities;
     const glm::vec3 mainCameraStart = glm::vec3(0.0f, 1.5f, 0.5f);
@@ -440,7 +440,7 @@ void renderFrame(GLFWwindow* window)
 
 SceneModule getModule()
 {
-    return { "Scene2", init, onEnter, renderFrame, framebuffer_size_callback, mouse_callback, scroll_callback, getCameraPose, getDefaultCameraPose, setCameraPose };
+    return { "desert", init, onEnter, renderFrame, framebuffer_size_callback, mouse_callback, scroll_callback, getCameraPose, getDefaultCameraPose, setCameraPose };
 }
 
 int runStandalone()
@@ -671,11 +671,11 @@ void resizeSceneTarget(int width, int height) {
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-} // namespace Scene2
+} // namespace desert
 
 #ifndef COMBINED_SCENE_APP
 int main()
 {
-    return Scene2::runStandalone();
+    return desert::runStandalone();
 }
 #endif
