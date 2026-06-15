@@ -13,8 +13,10 @@ file(GLOB SOURCE
 set(SOURCE ${SOURCE} glad.c)
 list(APPEND SOURCE
     src/shared/stb_image_impl.cpp
+    src/shared/scene_transition_effect.cpp
     src/0-base/scene.cpp
     src/1-volcano/scene.cpp
+    src/1-volcano/volcano_trajectory.cpp
     src/2-desert/scene.cpp
     src/3-underwater/scene.cpp
 )

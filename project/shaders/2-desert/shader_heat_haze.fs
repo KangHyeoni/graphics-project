@@ -8,6 +8,7 @@ uniform vec2 resolution;
 uniform float time;
 uniform float hazeAmount;
 uniform float groundTemp;
+uniform bool overlayOnly;
 
 const float HAZE_STRENGTH = 5.0;
 const float FAR_DEPTH_HAZE = 0.15;
@@ -79,7 +80,7 @@ float rectMask(vec2 p, vec2 minPoint, vec2 size)
     return inside.x * inside.y;
 }
 
-vec3 drawTemperatureUI(vec2 uv, vec3 sceneColor)
+vec4 drawTemperatureUI(vec2 uv, vec3 sceneColor)
 {
     vec2 p = vec2(uv.x * resolution.x, (1.0 - uv.y) * resolution.y);
     float screenScale = clamp(resolution.y / 900.0, 0.85, 1.45);
@@ -96,9 +97,11 @@ vec3 drawTemperatureUI(vec2 uv, vec3 sceneColor)
     vec2 innerSize = barSize - vec2(border * 2.0);
     float innerMask = rectMask(p, innerMin, innerSize);
 
-    vec3 color = sceneColor;
+    vec3 color = overlayOnly ? vec3(0.0) : sceneColor;
+    float alpha = overlayOnly ? 0.0 : 1.0;
     if (outerMask > 0.5) {
         color = frameColor;
+        alpha = 1.0;
     }
     if (innerMask > 0.5) {
         float barT = 1.0 - clamp((p.y - innerMin.y) / innerSize.y, 0.0, 1.0);
@@ -108,6 +111,7 @@ vec3 drawTemperatureUI(vec2 uv, vec3 sceneColor)
         color = barT < 0.5
             ? mix(coldColor, midColor, barT * 2.0)
             : mix(midColor, hotColor, (barT - 0.5) * 2.0);
+        alpha = 1.0;
     }
 
     float markerLength = 24.0 * uiScale;
@@ -121,14 +125,25 @@ vec3 drawTemperatureUI(vec2 uv, vec3 sceneColor)
 
     if (markerMask > 0.5) {
         color = markerColor;
+        alpha = 1.0;
     }
 
-    return color;
+    return vec4(color, alpha);
 }
 
 void main()
 {
     vec2 uv = TexCoords;
+
+    if (overlayOnly) {
+        vec4 overlayColor = drawTemperatureUI(uv, vec3(0.0));
+        if (overlayColor.a <= 0.0) {
+            discard;
+        }
+        FragColor = overlayColor;
+        return;
+    }
+
     float heat = heatBandMask(uv) * approximateDepthMask(uv) * (1.0 - uiMask(uv)) * hazeAmount;
 
     vec2 aspect = vec2(resolution.x / max(resolution.y, 1.0), 1.0);
@@ -146,6 +161,5 @@ void main()
 
     vec2 sampleUV = clamp(uv + offset, vec2(0.001), vec2(0.999));
     vec3 color = texture(sceneTexture, sampleUV).rgb;
-    color = drawTemperatureUI(uv, color);
-    FragColor = vec4(color, 1.0);
+    FragColor = drawTemperatureUI(uv, color);
 }

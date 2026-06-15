@@ -82,10 +82,13 @@ unsigned int sceneFBO = 0;
 unsigned int sceneColorTexture = 0;
 
 // For temperature
+constexpr float MIN_GROUND_TEMP = 20.0f;
+constexpr float MAX_GROUND_TEMP = 210.0f;
 float groundTemp = 20.0f;
 float skyTemp = 20.0f;
 float tempBefore = groundTemp;
 float grouondTemp_Initial = 100.0f;
+float temperatureControlOffset = 0.0f;
 
 constexpr float TEMPERATURE_INTRO_HOLD_SECONDS = 6.0f;
 constexpr float TEMPERATURE_ANIMATION_SECONDS = 20.0f;
@@ -95,11 +98,8 @@ constexpr float TEMPERATURE_TOTAL_SECONDS =
 
 float getGroundTempAtTime(float renderTime)
 {
-    const float maximumGroundTemp = 210.0f;
-    const float minimumGroundTemp = 20.0f;
-
     float heatT = 1.0f - glm::clamp(renderTime / TEMPERATURE_ANIMATION_SECONDS, 0.0f, 1.0f);
-    return minimumGroundTemp + (maximumGroundTemp - minimumGroundTemp) * heatT;
+    return MIN_GROUND_TEMP + (MAX_GROUND_TEMP - MIN_GROUND_TEMP) * heatT;
 }
 
 float getTemperatureRenderTime(float elapsedTime)
@@ -297,6 +297,7 @@ void init(GLFWwindow* window)
     heatHazeShader.setInt("sceneTexture", 0);
     heatHazeShader.setFloat("hazeAmount", 0.0f);
     heatHazeShader.setFloat("groundTemp", groundTemp);
+    heatHazeShader.setBool("overlayOnly", false);
 
     lightingShader.use();
     lightingShader.setInt("material.diffuseSampler", 0);
@@ -325,6 +326,7 @@ void init(GLFWwindow* window)
         sceneStartTime = static_cast<float>(glfwGetTime());
         lastFrame = 0.0f;
         firstMouse = true;
+        temperatureControlOffset = 0.0f;
         glfwGetFramebufferSize(window, &framebufferWidth, &framebufferHeight);
         resizeSceneTarget(framebufferWidth, framebufferHeight);
     };
@@ -337,6 +339,7 @@ void init(GLFWwindow* window)
         float temperatureTime = getTemperatureRenderTime(elapsedTime);
         deltaTime = elapsedTime - lastFrame;
         lastFrame = elapsedTime;
+        processInput(window);
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glEnable(GL_DEPTH_TEST);
@@ -345,7 +348,9 @@ void init(GLFWwindow* window)
         glDisable(GL_BLEND);
 
         // [Project] Animate temperature change
-        groundTemp = getGroundTempAtTime(temperatureTime);
+        float animatedGroundTemp = getGroundTempAtTime(temperatureTime);
+        groundTemp = glm::clamp(animatedGroundTemp + temperatureControlOffset, MIN_GROUND_TEMP, MAX_GROUND_TEMP);
+        temperatureControlOffset = groundTemp - animatedGroundTemp;
 
         glm::mat4 lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 0.1f, 80.0f);
         glm::mat4 lightView = glm::lookAt(
@@ -402,6 +407,7 @@ void init(GLFWwindow* window)
         heatHazeShader.setVec2("resolution", static_cast<float>(framebufferWidth), static_cast<float>(framebufferHeight));
         heatHazeShader.setFloat("hazeAmount", getHazeAmountAtTime(temperatureTime, groundTemp));
         heatHazeShader.setFloat("groundTemp", groundTemp);
+        heatHazeShader.setBool("overlayOnly", false);
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glViewport(0, 0, framebufferWidth, framebufferHeight);
@@ -428,8 +434,20 @@ void init(GLFWwindow* window)
         drawModelEntities(lightingShader, houseEntities);
 
         glDisable(GL_DEPTH_TEST);
+        glDepthMask(GL_FALSE);
+        glEnable(GL_BLEND);
+        glBlendEquation(GL_FUNC_ADD);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        processInput(window);
+        heatHazeShader.use();
+        heatHazeShader.setVec2("resolution", static_cast<float>(framebufferWidth), static_cast<float>(framebufferHeight));
+        heatHazeShader.setFloat("groundTemp", groundTemp);
+        heatHazeShader.setBool("overlayOnly", true);
+        glBindVertexArray(quad->ID);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+        glDisable(GL_BLEND);
+        glDepthMask(GL_TRUE);
 
         // -------------------------------------------------------------------------------
     };
@@ -593,11 +611,10 @@ void processInput(GLFWwindow* window)
 
     // Temperature control
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-        groundTemp += 20.0f * deltaTime; // raise temp
+        temperatureControlOffset += 20.0f * deltaTime; // raise temp
     }
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-        groundTemp -= 20.0f * deltaTime; // lower temp
-        if (groundTemp < 20.0f) groundTemp = 20.0f; // minimum temp
+        temperatureControlOffset -= 20.0f * deltaTime; // lower temp
     }
 
 }

@@ -21,6 +21,8 @@ struct Particle {
     Particle() : Position(0.0f), Velocity(0.0f), Normal(0.0f, 1.0f, 0.0f), Color(1.0f), Life(0.0f), Size(0.05f) { }
 };
 
+// [Feature] Fire Particle System: Add some random concepts
+// For toothless object
 class FireParticleSystem {
 public:
     // FireParticleSystem generator
@@ -60,6 +62,7 @@ public:
         }
     }
 
+    // Draw particles: Render them as billboards that always face the camera
     void Draw(Camera& camera) {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE);
@@ -76,7 +79,7 @@ public:
             if (particle.Life > 0.0f) {
                 this->shader.setVec4("color", particle.Color);
                 
-                // [Feature] Billboard
+                // [Feature] Billboard particles
                 glm::mat4 model = glm::mat4(1.0f);
                 model = glm::translate(model, particle.Position);
                 model = glm::scale(model, glm::vec3(0.05f));
@@ -99,7 +102,7 @@ private:
     Shader shader;
     unsigned int VAO;
 
-    // Curl Noise helper function
+    // Curl Noise helper function: simplex noise
     glm::vec3 snoiseVec3(glm::vec3 x) {
         float s  = glm::simplex(x);
         float s1 = glm::simplex(glm::vec3(x.y - 19.1f, x.z + 33.4f, x.x + 47.2f));
@@ -153,6 +156,7 @@ private:
             this->particles.push_back(Particle());
     }
 
+    // Find the first particle that is currently unused (life <= 0.0f) and return its index
     unsigned int lastUsedParticle = 0;
     unsigned int firstUnusedParticle() {
         for (unsigned int i = lastUsedParticle; i < this->amount; ++i) {
@@ -171,7 +175,7 @@ private:
         return 0;
     }
 
-    // Spawn particle at random vertex of submesh
+    // Spawn particle at random vertex of submesh and set its normal to the vertex normal
     void respawnParticle(Particle &particle, Model* targetModel, glm::mat4 modelMatrix) {
         if (!targetModel || targetModel->subMeshes.empty()) return;
         int subMeshIdx = rand() % targetModel->subMeshes.size();
@@ -179,12 +183,12 @@ private:
         if (vertices.empty()) return;
         Vertex randomVertex = vertices[rand() % vertices.size()];
 
-        // Transformation between space
+        // Transformation between space of model and world
         particle.Position = glm::vec3(modelMatrix * glm::vec4(randomVertex.Position, 1.0f));
         glm::mat3 normalMatrix = glm::mat3(glm::transpose(glm::inverse(modelMatrix)));
         particle.Normal = glm::normalize(normalMatrix * randomVertex.Normal);
 
-        float hoverOffset = 0.01f; // set little above the vertex
+        float hoverOffset = 0.01f; // set little above the vertex to prevent z-fighting
         particle.Position += particle.Normal * hoverOffset;
         particle.Color = glm::vec4(1.0f, (rand() % 30)/100.0f, 0.0f, 1.0f); 
         particle.Life = 1.0f + (rand() % 100) / 100.0f; 
@@ -193,6 +197,7 @@ private:
 };
 
 // [Feature] Meteor Trail Particle System: Add some random concepts
+// To make visual interesting points
 class MeteorParticleSystem {
 public:
     MeteorParticleSystem(Shader shader, unsigned int amount)
@@ -200,6 +205,8 @@ public:
         this->init();
     }
 
+    // [Feature] Emit particles along the meteor's path 
+    // with some random spread to create a fiery trail effect
     void EmitTrail(const glm::vec3& headPosition, const glm::vec3& velocity, unsigned int newParticles = 25,
                    float particleSize = 0.14f, float spread = 0.25f, float minLife = 0.35f, float maxLife = 0.9f) {
         glm::vec3 trailDir = glm::normalize(-velocity);
@@ -218,6 +225,8 @@ public:
         }
     }
 
+    // [Feature] Surface Fire Emission: Emit particles 
+    // from the surface of the volcano to create a burning effect
     void EmitSurfaceFire(Model* targetModel, const glm::mat4& modelMatrix, const glm::vec3& velocity,
                          unsigned int newParticles = 40, float particleSize = 0.14f, float spread = 0.5f,
                          float minLife = 0.45f, float maxLife = 1.0f) {
@@ -231,6 +240,8 @@ public:
         }
     }
 
+    // Update particles: Move them according to their velocity, 
+    // apply some damping, and fade them out over time
     void Update(float dt) {
         for (unsigned int i = 0; i < this->amount; ++i) {
             Particle& p = this->particles[i];
@@ -243,6 +254,7 @@ public:
         }
     }
 
+    // Draw particles: Render them as billboards that always face the camera
     void Draw(Camera& camera) {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE);
@@ -338,6 +350,7 @@ private:
         particle.Size = particleSize * (0.75f + (rand() % 60) / 100.0f);
     }
 
+    // Spawn particle at random vertex of submesh and set its normal to the vertex normal
     void respawnSurfaceParticle(Particle& particle, Model* targetModel, const glm::mat4& modelMatrix,
                                 const glm::vec3& velocity, const glm::vec3& trailDir,
                                 float particleSize, float spread, float minLife, float maxLife) {
@@ -366,6 +379,7 @@ private:
         }
         glm::vec3 sideB = glm::normalize(glm::cross(normal, sideA));
 
+        // Add some random offset to the particle position to create a more natural fire effect
         float outwardOffset = 0.02f + (rand() % 100) / 100.0f * spread * 0.2f;
         float sideOffsetA = ((rand() % 100) / 100.0f - 0.5f) * spread * 0.2f;
         float sideOffsetB = ((rand() % 100) / 100.0f - 0.5f) * spread * 0.2f;
