@@ -6,6 +6,10 @@ Spring 2026 SNU Graphics Programming (430.638) final project repository.
 
 Sukhun Yang (@Sagit25), Kanghyeon Cho (@KangHyeoni), Taesun Kim (@alexdavid-113)
 
+### Each Member's work
+- Sukhun Yang: [Sukhun-Yang.md](Sukhun-Yang.md), Implement base scene and volcano scene (Fire-Guide Feature)
+
+
 ## Code Structure
 
 ```text
@@ -44,6 +48,3 @@ project/
     |-- 2-desert/                       # Desert skybox and pyramid textures
     `-- 3-underwater/                   # Fish, boat, caustics, seashell, and terrain assets
 ```
-
-## Each Member's work
-- Sukhun Yang: [Sukhun-Yang.md](Sukhun-Yang.md)
