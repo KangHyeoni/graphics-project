@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <ctime>
+#define _USE_MATH_DEFINES
 #include <cmath>
 #include "shared/scene_module.h"
 #include "shared/fade_foreground.h"
