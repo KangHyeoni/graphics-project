@@ -23,7 +23,7 @@ Sukhun Yang (@Sagit25), Kanghyeon Cho (@KangHyeoni), Taesun Kim (@alexdavid-113)
 ### Each Member's work
 - Sukhun Yang: [Sukhun-Yang.md](./documents/Sukhun-Yang.md), Implement the base scene and the volcano scene (Fire-Guide Feature)
 - Taesun Kim: [Taesun-Kim.md](./documents/Taesun-Kim.md), Implemented the desert scene (Mirage Feature) and made the final presentation slides
-- Kanghyeon Cho: [Kanghyeon-Cho.md](./documents/Kanghyeon-Cho.md), Implemented the underwater scene, integrated all scenes into a single application, and produced the final video.
+- Kanghyeon Cho: [Kanghyeon-Cho.md](./documents/Kanghyeon-Cho.md), Implemented the underwater scene (Skeletal-Animation, Boids Algorithm Feature), integrated all scenes into a single application, and produced the final video.
 
 
 ## Code Structure
