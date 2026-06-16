@@ -104,6 +104,7 @@ These choices make the scene denser and more understandable from the camera's po
 - `project/src/shared/scene_module.h`
 - `project/src/shared/scene_transition_effect.h`
 - `project/src/shared/scene_transition_effect.cpp`
+- `project/src/shared/fade_foreground.h`
 
 I also helped restructure the project so every scene can be loaded and rendered from one shared application entry point.
 
@@ -113,6 +114,7 @@ Main implementation details:
 - Exposed each scene through a `SceneModule` returned by `getModule()`.
 - Built a unified `project/src/main.cpp` that initializes all scene modules once and toggles them with the Tab key.
 - Preserved relative camera pose between scenes and added a black fade transition with `scene_transition_effect`.
-- Rendered house-related foreground entities after the active scene so the shared house remains visually stable across scene transitions.
+- Added `fade_foreground.h` to share the foreground redraw path used during scene transitions.
+- Rendered house-related foreground entities after the active scene and fade overlay so the shared house remains visually stable across scene transitions.
 
 This made the four scenes work as one combined application without merging all scene-specific rendering code into a single large scene file.
