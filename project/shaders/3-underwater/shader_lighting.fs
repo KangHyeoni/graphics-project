@@ -10,7 +10,7 @@ struct Material {
 
 struct Light {
     vec3 dir;
-    vec3 color; // this is I_d (I_s = I_d, I_a = 0.3 * I_d)
+    vec3 color;
 };
 
 uniform vec3 viewPos;
@@ -19,7 +19,6 @@ uniform Light light;
 
 in vec2 TexCoord;
 
-// I referenced this part from learnopengl lighting and normal and shadow code
 in vec3 Normal;  
 in vec3 FragPos;
 in mat3 TBN;
@@ -45,17 +44,14 @@ uniform vec3 houseEffectMax;
 const float causticStrength = 0.85;
 const float causticFrameRate = 18.0;
 
-// I referenced this part from learnopengl Stratified Poisson Sampling part
 uniform sampler2D depthMapSampler;
 
-// I referenced this part from learnopengl Stratified Poisson Sampling part
 float random(vec3 seed, int i){
 	vec4 seed4 = vec4(seed,i);
 	float dot_product = dot(seed4, vec4(12.9898,78.233,45.164,94.673));
 	return fract(sin(dot_product) * 43758.5453);
 }
 
-// I referenced this part from learnopengl shadow part
 float ShadowCalculation(vec4 fragPosLightSpace)
 {
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
@@ -67,7 +63,6 @@ float ShadowCalculation(vec4 fragPosLightSpace)
     float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.0005);
     float shadow = 0.0f;
 
-    // I referenced this part from learnopengl Stratified Poisson Sampling part
     if (usePCF > 0.5f) {
         vec2 poissonDisk[16] = vec2[]( 
             vec2( -0.94201624, -0.39906216 ), 
@@ -148,7 +143,6 @@ void main()
         color = baseColor;
     }
 
-    // I referenced this part from learnopengl lighting part
     // ambient part
     vec3 ambient = 0.3 * light.color * color;
     vec3 totalColor = ambient;
@@ -170,13 +164,11 @@ void main()
     // useNormalMap is set per submesh according to normal-map availability.
 	if(useNormalMap > 0.5f)
 	{
-        // I referenced this part from learnopengl normal part
         normal = texture(material.normalSampler, TexCoord).rgb; // normal map
         normal = normalize(normal * 2.0 - 1.0);
         normal = normalize(TBN * normal);
 	}
 
-    // I referenced this part from learnopengl lighting part
     // diffuse part
     float diff = max(dot(normal, normalize(-light.dir)), 0.0);
     vec3 diffuse = diff * light.color * color;
@@ -189,7 +181,6 @@ void main()
 	{
         //use only red channel of specularSampler as a reflectance coefficient(k_s).
         if (diff > 0.0f) {
-            // I referenced this part from learnopengl lighting part
             // specular part
             vec3 viewDir = normalize(viewPos - FragPos);
             vec3 reflectDir = reflect(light.dir, normal);  
