@@ -41,8 +41,6 @@ public:
 	}
 
 	void updateLightDir() {
-		// TODO:
-
 		// update lightDir according to azimuth and elevation.
 		float dirX = -cos(glm::radians(elevation)) * cos(glm::radians(azimuth));
 		float dirY = -sin(glm::radians(elevation));
@@ -53,7 +51,6 @@ public:
 	// Processes input received from a mouse input system. Expects the offset value in both the x(azimuth) and y(elevation) direction.
 	void processKeyboard(float xoffset, float yoffset)
 	{
-		// TODO:
 		// set elevation between 15 to 80 (degree)!
 
 		float sensitivity = 1.0f;

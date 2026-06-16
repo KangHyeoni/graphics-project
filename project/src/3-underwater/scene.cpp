@@ -309,7 +309,6 @@ void init(GLFWwindow* window)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-        // TODO :
         // (1) render shadow map!
             // framebuffer: shadow frame buffer(depth.depthMapFBO)
             // shader : shadow.fs/vs
