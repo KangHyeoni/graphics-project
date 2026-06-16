@@ -1,6 +1,6 @@
 ## Personal Contribution by Taesun Kim
 
-**Main file for 1~4:** `shaders/2-desert/shader_ray_tracing.fs`
+**Main file for 1~4:** `project/shaders/2-desert/shader_ray_tracing.fs`
 
 ### 1. Mirage Renderer with Non-linear Ray Marching
 
@@ -67,7 +67,7 @@ These restrictions were important because a mirage should feel attached to the h
 
 ### 5. Heat Haze Post-processing Pass
 
-**Primary source:** `shaders/2-desert/shader_heat_haze.fs`
+**Primary source:** `project/shaders/2-desert/shader_heat_haze.fs`
 
 To make the heat more visible, I implemented an additional screen-space haze pass.
 
@@ -85,7 +85,7 @@ This pass strengthens the perception of unstable hot air while still relying on 
 
 ### 6. Temperature Animation, Controls, and Rendering Flow
 
-**Primary source:** `src/2-desert/scene.cpp`
+**Primary source:** `project/src/2-desert/scene.cpp`
 
 I connected the shader features to the desert scene runtime and added temperature-driven interaction.
 
