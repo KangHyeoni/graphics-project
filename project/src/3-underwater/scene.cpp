@@ -161,10 +161,10 @@ void init(GLFWwindow* window)
         return housePosition + glm::vec3(-local.x, local.y, -local.z);
     };
 
-    addFadeForegroundEntity(scene, fadeForegroundEntities, new Entity(&houseModel, housePosition, 0.0f, -90.0f + furnitureTurnY, 0.0f, 1.0f));
-    addFadeForegroundEntity(scene, fadeForegroundEntities, new Entity(&fireExtModel, rotateInHouse(glm::vec3(-3.5f, 0.0f, 1.5f)), 0.0f, 180.0f + furnitureTurnY, 0.0f, 0.001f));
-    addFadeForegroundEntity(scene, fadeForegroundEntities, new Entity(&sofaModel, rotateInHouse(glm::vec3(-2.5f, 0.1f, 0.5f)), 0.0f, furnitureTurnY, 0.0f, 0.5f));
-    addFadeForegroundEntity(scene, fadeForegroundEntities, new Entity(&tableModel, rotateInHouse(glm::vec3(2.5f, 0.0f, 1.0f)), 0.0f, furnitureTurnY, 0.0f, 1.2f));
+    addFadeEntity(scene, fadeForegroundEntities, new Entity(&houseModel, housePosition, 0.0f, -90.0f + furnitureTurnY, 0.0f, 1.0f));
+    addFadeEntity(scene, fadeForegroundEntities, new Entity(&fireExtModel, rotateInHouse(glm::vec3(-3.5f, 0.0f, 1.5f)), 0.0f, 180.0f + furnitureTurnY, 0.0f, 0.001f));
+    addFadeEntity(scene, fadeForegroundEntities, new Entity(&sofaModel, rotateInHouse(glm::vec3(-2.5f, 0.1f, 0.5f)), 0.0f, furnitureTurnY, 0.0f, 0.5f));
+    addFadeEntity(scene, fadeForegroundEntities, new Entity(&tableModel, rotateInHouse(glm::vec3(2.5f, 0.0f, 1.0f)), 0.0f, furnitureTurnY, 0.0f, 1.2f));
 
     static const float propData[][7] = {
         { -7.6f, -1.05f, -24.0f, -26.0f, -8.0f, 14.0f, 0.28f },
@@ -468,7 +468,7 @@ void renderFadeForeground(GLFWwindow* window)
         return;
     }
 
-    renderLitFadeForegroundEntities(
+    renderFadeEntities(
         *fadeForegroundShader,
         fadeForegroundEntities,
         camera,

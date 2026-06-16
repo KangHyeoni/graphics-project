@@ -168,10 +168,10 @@ void init(GLFWwindow* window)
         return housePosition + glm::vec3(-local.x, local.y, -local.z);
     };
 
-    addFadeForegroundEntity(scene, fadeForegroundEntities, new Entity(&houseModel, housePosition, 0.0f, -90.0f + furnitureTurnY, 0.0f, 1.0f));
-    addFadeForegroundEntity(scene, fadeForegroundEntities, new Entity(&fireExtModel, rotateInHouse(glm::vec3(-3.5f, 0.0f, 1.5f)), 0.0f, 180.0f + furnitureTurnY, 0.0f, 0.001f));
-    addFadeForegroundEntity(scene, fadeForegroundEntities, new Entity(&sofaModel, rotateInHouse(glm::vec3(-2.5f, 0.1f, 0.5f)), 0.0f, furnitureTurnY, 0.0f, 0.5f));
-    addFadeForegroundEntity(scene, fadeForegroundEntities, new Entity(&tableModel, rotateInHouse(glm::vec3(2.5f, 0.0f, 1.0f)), 0.0f, furnitureTurnY, 0.0f, 1.2f));
+    addFadeEntity(scene, fadeForegroundEntities, new Entity(&houseModel, housePosition, 0.0f, -90.0f + furnitureTurnY, 0.0f, 1.0f));
+    addFadeEntity(scene, fadeForegroundEntities, new Entity(&fireExtModel, rotateInHouse(glm::vec3(-3.5f, 0.0f, 1.5f)), 0.0f, 180.0f + furnitureTurnY, 0.0f, 0.001f));
+    addFadeEntity(scene, fadeForegroundEntities, new Entity(&sofaModel, rotateInHouse(glm::vec3(-2.5f, 0.1f, 0.5f)), 0.0f, furnitureTurnY, 0.0f, 0.5f));
+    addFadeEntity(scene, fadeForegroundEntities, new Entity(&tableModel, rotateInHouse(glm::vec3(2.5f, 0.0f, 1.0f)), 0.0f, furnitureTurnY, 0.0f, 1.2f));
 
     static Entity* toothlessEntity = new Entity(&toothlessModel, glm::vec3(1.0f, -3.0f, 1.0f) + fireSceneOffset, -90.0f, 180.0f, 0.0f, 0.05f);
     scene.addEntity(toothlessEntity);
@@ -528,7 +528,7 @@ void renderFadeForeground(GLFWwindow* window)
         return;
     }
 
-    renderLitFadeForegroundEntities(
+    renderFadeEntities(
         *fadeForegroundShader,
         fadeForegroundEntities,
         camera,

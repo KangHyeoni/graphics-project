@@ -459,7 +459,7 @@ void renderFadeForeground(GLFWwindow* window)
         return;
     }
 
-    beginFadeForegroundRender(framebufferWidth, framebufferHeight);
+    beginFadeRender(framebufferWidth, framebufferHeight);
 
     glm::mat4 lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 0.1f, 80.0f);
     glm::mat4 lightView = glm::lookAt(
@@ -490,7 +490,7 @@ void renderFadeForeground(GLFWwindow* window)
     glBindTexture(GL_TEXTURE_2D, fadeForegroundDepth->ID);
 
     drawModelEntities(*fadeForegroundShader, *fadeForegroundEntities);
-    endFadeForegroundRender();
+    endFadeRender();
 }
 
 SceneModule getModule()

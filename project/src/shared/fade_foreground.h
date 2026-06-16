@@ -15,13 +15,13 @@
 #include "shader.h"
 #include "texture.h"
 
-inline void addFadeForegroundEntity(Scene& scene, std::vector<Entity*>& foregroundEntities, Entity* entity)
+inline void addFadeEntity(Scene& scene, std::vector<Entity*>& foregroundEntities, Entity* entity)
 {
     foregroundEntities.push_back(entity);
     scene.addEntity(entity);
 }
 
-inline void beginFadeForegroundRender(int framebufferWidth, int framebufferHeight)
+inline void beginFadeRender(int framebufferWidth, int framebufferHeight)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, framebufferWidth, framebufferHeight);
@@ -32,12 +32,12 @@ inline void beginFadeForegroundRender(int framebufferWidth, int framebufferHeigh
     glClear(GL_DEPTH_BUFFER_BIT);
 }
 
-inline void endFadeForegroundRender()
+inline void endFadeRender()
 {
     glBindVertexArray(0);
 }
 
-inline void drawLitFadeForegroundEntities(Shader& shader, const std::vector<Entity*>& entities)
+inline void drawFadeEntities(Shader& shader, const std::vector<Entity*>& entities)
 {
     for (Entity* entity : entities) {
         if (!entity || !entity->visible || !entity->model) {
@@ -85,7 +85,7 @@ inline void drawLitFadeForegroundEntities(Shader& shader, const std::vector<Enti
     }
 }
 
-inline void renderLitFadeForegroundEntities(
+inline void renderFadeEntities(
     Shader& shader,
     const std::vector<Entity*>& entities,
     Camera& camera,
@@ -101,7 +101,7 @@ inline void renderLitFadeForegroundEntities(
         return;
     }
 
-    beginFadeForegroundRender(framebufferWidth, framebufferHeight);
+    beginFadeRender(framebufferWidth, framebufferHeight);
 
     glm::mat4 lightProjection = light.getProjectionMatrix();
     glm::mat4 lightView = light.getViewMatrix(camera.Position);
@@ -135,8 +135,8 @@ inline void renderLitFadeForegroundEntities(
         glBindTexture(GL_TEXTURE_2D_ARRAY, caustics->ID);
     }
 
-    drawLitFadeForegroundEntities(shader, entities);
-    endFadeForegroundRender();
+    drawFadeEntities(shader, entities);
+    endFadeRender();
 }
 
 #endif
