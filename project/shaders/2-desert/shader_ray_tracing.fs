@@ -8,7 +8,6 @@ in vec2 TexCoords;
 const int MAX_DEPTH = 10; // maximum bounce
 vec3 colorStack[MAX_DEPTH];
 
-// Optional for Figure 1(h): accumulation support.
 uniform sampler2D accumPrev;
 uniform int frameCountWithoutMove;
 uniform bool displayOnly;
@@ -171,7 +170,6 @@ bool checkDownwardPyramid(vec3 p, Pyramid pyr, out vec3 normal) {
     return false;
 }
 
-
 const float texScale = 0.2; // Texture size scaling
 
 bool checkObjectHitVolume(vec3 p, out Material hitMat, out vec3 hitNormal, out vec2 hitUV, out int hitObjType) {
@@ -283,6 +281,7 @@ vec3 drawTemperatureUI(vec3 sceneColor) {
 
     return color;
 }
+
 // Temperature field
 float getTemperature(vec3 p) {
     // ==========================================================
@@ -350,8 +349,6 @@ float getTemperature(vec3 p) {
     return skyTemp +
         (currentGroundTemp - skyTemp) * (decay + turbulence);
 }
-
-
 
 // IOR(Index of Refraction) of air by temperature
 float getIOR(float T) {
@@ -434,7 +431,6 @@ vec3 rayMarch(Ray ray) {
 
     return texture(skybox, currentDir).rgb;
 }
-
 
 void main()
 {
