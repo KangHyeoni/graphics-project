@@ -49,7 +49,7 @@ static void switchToScene(GLFWwindow* window, int targetSceneIndex)
     if (scenes.empty()) {
         return;
     }
-    if (targetSceneIndex < 0 || targetSceneIndex >= static_cast<int>(scenes.size())) {
+    if (targetSceneIndex < 0 || targetSceneIndex >= (int)scenes.size()) {
         return;
     }
 
@@ -93,13 +93,13 @@ static void requestNextSceneTransition()
         return;
     }
 
-    int targetSceneIndex = (activeSceneIndex + 1) % static_cast<int>(scenes.size());
-    scene_transition_effect::request(targetSceneIndex, static_cast<float>(glfwGetTime()));
+    int targetSceneIndex = (activeSceneIndex + 1) % (int)scenes.size();
+    scene_transition_effect::request(targetSceneIndex, (float)glfwGetTime());
 }
 
 static void updateSceneTransition(GLFWwindow* window)
 {
-    int targetSceneIndex = scene_transition_effect::update(static_cast<float>(glfwGetTime()));
+    int targetSceneIndex = scene_transition_effect::update((float)glfwGetTime());
     if (targetSceneIndex >= 0) {
         switchToScene(window, targetSceneIndex);
     }
@@ -171,7 +171,7 @@ int main()
         if (activeScene().renderFrame) {
             activeScene().renderFrame(window);
         }
-        float fadeAlpha = scene_transition_effect::getFadeAlpha(static_cast<float>(glfwGetTime()));
+        float fadeAlpha = scene_transition_effect::getFadeAlpha((float)glfwGetTime());
         scene_transition_effect::drawFadeOverlay(fadeAlpha);
         if (fadeAlpha > 0.0f && activeScene().renderFadeForeground) {
             activeScene().renderFadeForeground(window);

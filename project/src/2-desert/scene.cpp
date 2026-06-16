@@ -306,10 +306,10 @@ void init(GLFWwindow* window)
     lastFrame = 0.0f;
 
     
-    static float sceneStartTime = static_cast<float>(glfwGetTime());
+    static float sceneStartTime = (float)glfwGetTime();
 
     onEnterImpl = [&](GLFWwindow* window) {
-        sceneStartTime = static_cast<float>(glfwGetTime());
+        sceneStartTime = (float)glfwGetTime();
         lastFrame = 0.0f;
         firstMouse = true;
         temperatureControlOffset = 0.0f;
@@ -320,7 +320,7 @@ void init(GLFWwindow* window)
     renderFrameImpl = [&](GLFWwindow* window) {
 
         // For quick camera movement
-        float absoluteTime = static_cast<float>(glfwGetTime());
+        float absoluteTime = (float)glfwGetTime();
         float elapsedTime = absoluteTime - sceneStartTime;
         float temperatureTime = getTemperatureRenderTime(elapsedTime);
         deltaTime = elapsedTime - lastFrame;
@@ -390,7 +390,7 @@ void init(GLFWwindow* window)
 
         heatHazeShader.use();
         heatHazeShader.setFloat("time", noiseTime);
-        heatHazeShader.setVec2("resolution", static_cast<float>(framebufferWidth), static_cast<float>(framebufferHeight));
+        heatHazeShader.setVec2("resolution", (float)framebufferWidth, (float)framebufferHeight);
         heatHazeShader.setFloat("hazeAmount", getHazeAmountAtTime(temperatureTime, groundTemp));
         heatHazeShader.setFloat("groundTemp", groundTemp);
         heatHazeShader.setBool("overlayOnly", false);
@@ -409,7 +409,7 @@ void init(GLFWwindow* window)
         glClear(GL_DEPTH_BUFFER_BIT);
 
         lightingShader.use();
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), static_cast<float>(framebufferWidth) / static_cast<float>(framebufferHeight), 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)framebufferWidth / (float)framebufferHeight, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
         lightingShader.setVec3("viewPos", camera.Position);
         lightingShader.setMat4("projection", projection);
@@ -426,7 +426,7 @@ void init(GLFWwindow* window)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         heatHazeShader.use();
-        heatHazeShader.setVec2("resolution", static_cast<float>(framebufferWidth), static_cast<float>(framebufferHeight));
+        heatHazeShader.setVec2("resolution", (float)framebufferWidth, (float)framebufferHeight);
         heatHazeShader.setFloat("groundTemp", groundTemp);
         heatHazeShader.setBool("overlayOnly", true);
         glBindVertexArray(quad->ID);
@@ -470,7 +470,7 @@ void renderFadeForeground(GLFWwindow* window)
     glm::mat4 lightSpaceMatrix = lightProjection * lightView;
     glm::mat4 projection = glm::perspective(
         glm::radians(camera.Zoom),
-        static_cast<float>(framebufferWidth) / static_cast<float>(framebufferHeight),
+        (float)framebufferWidth / (float)framebufferHeight,
         0.1f,
         100.0f
     );

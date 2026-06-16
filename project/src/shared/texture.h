@@ -157,9 +157,9 @@ public:
             maxValue = std::max(maxValue, allFrames[i]);
         }
 
-        int range = std::max(1, static_cast<int>(maxValue) - static_cast<int>(minValue));
+        int range = std::max(1, (int)maxValue - (int)minValue);
         for (size_t i = 0; i < allFrames.size(); i++) {
-            allFrames[i] = static_cast<unsigned char>((static_cast<int>(allFrames[i]) - static_cast<int>(minValue)) * 255 / range);
+            allFrames[i] = (unsigned char)(((int)allFrames[i] - (int)minValue) * 255 / range);
         }
 
         glGenTextures(1, &ID);

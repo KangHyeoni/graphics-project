@@ -176,17 +176,17 @@ void init(GLFWwindow* window)
     static DirectionalLight sun(-90.0f, 45.0f, glm::vec3(1.0f));
     fadeForegroundSun = &sun;
 
-    static float oldTime = static_cast<float>(glfwGetTime());
+    static float oldTime = (float)glfwGetTime();
     
 
     onEnterImpl = [&](GLFWwindow* window) {
-        oldTime = static_cast<float>(glfwGetTime());
+        oldTime = (float)glfwGetTime();
         firstMouse = true;
     };
 
     renderFrameImpl = [&](GLFWwindow* window) {
 
-        float currentTime = static_cast<float>(glfwGetTime());
+        float currentTime = (float)glfwGetTime();
         float dt = currentTime - oldTime;
         deltaTime = dt;
         oldTime = currentTime;

@@ -79,7 +79,7 @@ void init(GLFWwindow* window)
 {
     if (initialized) return;
     initialized = true;
-    std::srand(static_cast<unsigned int>(std::time(nullptr)));
+    std::srand((unsigned int)std::time(nullptr));
     glfwGetFramebufferSize(window, &framebufferWidth, &framebufferHeight);
     glEnable(GL_DEPTH_TEST);
 
@@ -270,18 +270,18 @@ void init(GLFWwindow* window)
     static DirectionalLight sun(-90.0f, 45.0f, glm::vec3(1.0f));
     fadeForegroundSun = &sun;
 
-    static float oldTime = static_cast<float>(glfwGetTime());
+    static float oldTime = (float)glfwGetTime();
     
 
     onEnterImpl = [&](GLFWwindow* window) {
-        oldTime = static_cast<float>(glfwGetTime());
+        oldTime = (float)glfwGetTime();
         firstMouse = true;
         glClearColor(0.15f, 0.52f, 0.73f, 1.0f);
     };
 
     renderFrameImpl = [&](GLFWwindow* window) {
 
-        float currentTime = static_cast<float>(glfwGetTime());
+        float currentTime = (float)glfwGetTime();
         float dt = currentTime - oldTime;
         deltaTime = dt;
         oldTime = currentTime;
@@ -479,7 +479,7 @@ void renderFadeForeground(GLFWwindow* window)
         framebufferHeight,
         fadeForegroundCaustics,
         fadeForegroundCausticFrameCount,
-        static_cast<float>(glfwGetTime())
+        (float)glfwGetTime()
     );
 }
 

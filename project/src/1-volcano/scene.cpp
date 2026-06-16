@@ -100,7 +100,7 @@ struct Airplane {
 
 float randomRange(float minValue, float maxValue)
 {
-    float t = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+    float t = (float)rand() / (float)RAND_MAX;
     return minValue + (maxValue - minValue) * t;
 }
 
@@ -128,7 +128,7 @@ void init(GLFWwindow* window)
 {
     if (initialized) return;
     initialized = true;
-    std::srand(static_cast<unsigned int>(std::time(nullptr)));
+    std::srand((unsigned int)std::time(nullptr));
     glfwGetFramebufferSize(window, &framebufferWidth, &framebufferHeight);
     glEnable(GL_DEPTH_TEST);
 
@@ -244,12 +244,12 @@ void init(GLFWwindow* window)
     static DirectionalLight sun(-90.0f, 45.0f, glm::vec3(1.0f));
     fadeForegroundSun = &sun;
 
-    static float oldTime = static_cast<float>(glfwGetTime());
+    static float oldTime = (float)glfwGetTime();
     static float flightTime = 0.0f;
     
 
     onEnterImpl = [&](GLFWwindow* window) {
-        oldTime = static_cast<float>(glfwGetTime());
+        oldTime = (float)glfwGetTime();
         firstMouse = true;
         flightTime = 0.0f;
         nextMeteorSpawnTime = oldTime + 0.5f;
@@ -260,7 +260,7 @@ void init(GLFWwindow* window)
 
     renderFrameImpl = [&](GLFWwindow* window) {
 
-        float currentTime = static_cast<float>(glfwGetTime());
+        float currentTime = (float)glfwGetTime();
         float dt = currentTime - oldTime;
         deltaTime = dt;
         oldTime = currentTime;
@@ -341,7 +341,7 @@ void init(GLFWwindow* window)
         // Spawn airplanes at random intervals with random properties
         if (currentTime >= nextAirplaneSpawnTime) {
             std::vector<int> inactiveAirplanes;
-            for (int i = 0; i < static_cast<int>(airplanes.size()); ++i) {
+            for (int i = 0; i < (int)airplanes.size(); ++i) {
                 if (!airplanes[i].active) {
                     inactiveAirplanes.push_back(i);
                 }

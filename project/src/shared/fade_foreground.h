@@ -108,7 +108,7 @@ inline void renderLitFadeForegroundEntities(
     glm::mat4 lightSpaceMatrix = lightProjection * lightView;
     glm::mat4 projection = glm::perspective(
         glm::radians(camera.Zoom),
-        static_cast<float>(framebufferWidth) / static_cast<float>(framebufferHeight),
+        (float)framebufferWidth / (float)framebufferHeight,
         0.1f,
         100.0f
     );
@@ -130,7 +130,7 @@ inline void renderLitFadeForegroundEntities(
 
     if (caustics) {
         shader.setFloat("currentTime", currentTime);
-        shader.setFloat("causticFrameCount", static_cast<float>(std::max(causticFrameCount, 1)));
+        shader.setFloat("causticFrameCount", (float)std::max(causticFrameCount, 1));
         glActiveTexture(GL_TEXTURE5);
         glBindTexture(GL_TEXTURE_2D_ARRAY, caustics->ID);
     }
