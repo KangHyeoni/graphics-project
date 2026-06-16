@@ -18,7 +18,7 @@ To overcome computational cost limitations and showcase richer animations, offli
 
 ## Team Member
 
-Sukhun Yang (@Sagit25), Kanghyeon Cho (@KangHyeoni), Taesun Kim (@alexdavid-113)
+Sukhun Yang, Kanghyeon Cho, Taesun Kim
 
 ### Each Member's work
 - Sukhun Yang: [Sukhun-Yang.md](./documents/Sukhun-Yang.md), Implement the base scene and the volcano scene (Fire-Guide Feature)
